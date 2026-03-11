@@ -1,7 +1,7 @@
 # /api/routers/task.py
 
 from fastapi import APIRouter, HTTPException
-from app.schemas.task import TaskCreate, TaskResponse, TaskUpdate, TaskPatch
+from app.schemas.task import TaskCreate, TaskResponse, TaskUpdate, TaskPatch, TaskStatus
 from datetime import datetime, UTC
 
 # router
@@ -12,6 +12,8 @@ router = APIRouter()
 tasks: dict[int, dict] = {}
 next_id: int = 1
 
+# timestamp
+current_time = datetime.now(UTC).replace(microsecond=0)
 
 # -----------------------
 # lógica interna
@@ -22,10 +24,10 @@ def _create_task_logic(task: TaskCreate):
     new_task = {
         "id": next_id,
         "title": task.title,
-        "status": "pending",
+        "status": TaskStatus.pending,
         "description": task.description,
         "due_date": task.due_date,
-        "created_at": datetime.now(UTC).replace(microsecond=0),
+        "created_at": current_time,
         "updated_at": None
     }
     tasks[next_id] = new_task
@@ -49,7 +51,8 @@ def _update_task_logic(task_id: int, task_update: TaskUpdate):
     task["title"] = task_update.title
     task["description"] = task_update.description
     task["due_date"] = task_update.due_date
-    task["updated_at"] = datetime.now(UTC).replace(microsecond=0)
+    task["status"] = task_update.status
+    task["updated_at"] = current_time
 
     return task
 
@@ -65,7 +68,7 @@ def _patch_task_logic(task_id: int, task_patch: TaskPatch):
     for field, value in updates.items():
         task[field] = value
 
-    task["updated_at"] = datetime.now(UTC).replace(microsecond=0)
+    task["updated_at"] = current_time
 
     return task
 

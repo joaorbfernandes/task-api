@@ -1,4 +1,5 @@
 # tests/tasks/test_tasks_create.py
+from app.schemas.task import TaskStatus
 
 # ----------------------------------------
 # POST /tasks
@@ -31,6 +32,6 @@ def test_create_task_creates_new_task(create_task, parse_response):
 
     assert task.id == 1
     assert task.title == "My first task"
-    assert task.status == "pending"
+    assert task.status == TaskStatus.pending
     assert task.created_at is not None
     assert task.updated_at is None
