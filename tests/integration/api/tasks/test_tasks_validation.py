@@ -1,5 +1,5 @@
 # tests/tasks/test_tasks_validation.py
-
+import pytest
 # ----------------------------------------
 # POST /tasks validation
 # ----------------------------------------
@@ -47,6 +47,45 @@ def test_create_task_fails_when_extra_field_provided(client):
 
     # Assert
     assert response.status_code == 422
+
+@pytest.mark.parametrize("title, expected_status",
+    [
+        ("ab", 422),        # below minimum
+        ("abc", 201),       # minimum valid
+        ("a" * 120, 201),   # maximum valid
+        ("a" * 121, 422),   # above maximum
+    ],
+)
+def test_create_task_title_boundaries(client, title, expected_status):
+
+    # Arrange
+    payload = {"title": title, "description": "valid description", "due_date": None}
+
+    # Act
+    response = client.post("/tasks", json=payload)
+
+    # Assert
+    assert response.status_code == expected_status
+
+@pytest.mark.parametrize(
+    "description, expected_status",
+    [
+        ("", 422),           # below minimum
+        ("a", 201),          # minimum valid
+        ("a" * 500, 201),    # maximum valid
+        ("a" * 501, 422),    # above maximum
+    ],
+)
+def test_create_task_description_boundaries(client, description, expected_status):
+
+    # Arrange
+    payload = {"title": "valid title", "description": description, "due_date": None}
+
+    # Act
+    response = client.post("/tasks", json=payload)
+
+    # Assert
+    assert response.status_code == expected_status
 
 # ----------------------------------------
 # PUT /tasks validation
