@@ -35,7 +35,7 @@ class TaskService:
             "id": task_id,
             "title": task.title,
             "description": task.description,
-            "status": TaskStatus.pending,
+            "status": TaskStatus.PENDING,
             "due_date": task.due_date,
             "created_at": self._current_timestamp(),
             "updated_at": None,

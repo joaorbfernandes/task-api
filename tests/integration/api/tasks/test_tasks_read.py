@@ -1,5 +1,7 @@
 # tests/tasks/test_tasks_read.py
 
+from app.schemas.task import TaskStatus
+
 # ----------------------------------------
 # GET /tasks
 # ----------------------------------------
@@ -26,7 +28,9 @@ def test_list_tasks_returns_empty_list_when_no_tasks_exist(client):
     assert data == []
 
 def test_list_tasks_returns_created_tasks(client, create_task, parse_response):
-
+    """
+    GET /tasks should return previously created tasks.
+    """
     # Arrange
     expected_title = "task 1"
     create_task(title=expected_title)
@@ -44,6 +48,7 @@ def test_list_tasks_returns_created_tasks(client, create_task, parse_response):
 
     assert tasks[0].id == 1
     assert tasks[0].title == expected_title
+    assert tasks[0].status == TaskStatus.PENDING
 
 def test_list_tasks_returns_multiple_tasks(client, create_task, parse_response):
     """
@@ -75,6 +80,28 @@ def test_list_tasks_returns_multiple_tasks(client, create_task, parse_response):
     assert title_1 in titles
     assert title_2 in titles
 
+def test_list_tasks_returns_response_contract_fields(client, create_task, parse_response):
+    """
+    GET /tasks should return tasks with the expected response contract.
+    """
+
+    # Arrange
+    create_task(title="Task 1", description="testing")
+
+    # Act
+    response = client.get("/tasks")
+
+    # Assert
+    assert response.status_code == 200
+
+    data = response.json()
+    tasks = parse_response(data)
+
+    assert len(tasks) == 1
+    assert tasks[0].status == TaskStatus.PENDING
+    assert tasks[0].created_at is not None
+    assert tasks[0].updated_at is None
+
 # ----------------------------------------
 # GET /tasks/{id}
 # ----------------------------------------
@@ -82,11 +109,6 @@ def test_list_tasks_returns_multiple_tasks(client, create_task, parse_response):
 def test_get_task_returns_task_by_id(client, create_task, parse_response):
     """
     GET /tasks/{id} should return the task when it exists.
-
-    Flow:
-    1. Create a task
-    2. Request the task by id
-    3. Validate the returned data
     """
 
     # Arrange
@@ -100,7 +122,6 @@ def test_get_task_returns_task_by_id(client, create_task, parse_response):
     # Assert
     assert response.status_code == 200
 
-    # validate API contract
     data = response.json()
 
     # validate API contract
@@ -108,7 +129,9 @@ def test_get_task_returns_task_by_id(client, create_task, parse_response):
 
     assert task.id == task_id
     assert task.title == expected_title
-    assert task.status == "pending"
+    assert task.status == TaskStatus.PENDING
+    assert task.created_at is not None
+    assert task.updated_at is None
 
 def test_get_task_returns_404_when_task_does_not_exist(client):
     """
@@ -123,3 +146,30 @@ def test_get_task_returns_404_when_task_does_not_exist(client):
 
     # Assert
     assert response.status_code == 404
+
+def test_get_task_returns_due_date_when_present(client, create_task, parse_response):
+    """
+    GET /tasks/{id} should return due_date when it exists.
+    """
+
+    # Arrange
+    expected_due_date = "2026-03-20"
+    created_task = create_task(
+        title="Task with due date",
+        description="original",
+        due_date=expected_due_date,
+    ).json()
+    task_id = created_task["id"]
+
+    # Act
+    response = client.get(f"/tasks/{task_id}")
+
+    # Assert
+    assert response.status_code == 200
+
+    data = response.json()
+    task = parse_response(data)
+
+    assert str(task.due_date) == expected_due_date
+    assert task.title == "Task with due date"
+    assert task.status == TaskStatus.PENDING

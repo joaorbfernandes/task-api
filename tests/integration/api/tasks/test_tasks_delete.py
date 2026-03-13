@@ -4,7 +4,7 @@
 # DELETE /tasks/{id}
 # ----------------------------------------
 
-def test_delete_task_removes_task(client, create_task):
+def test_delete_task_removes_existing_task(client, create_task):
     """
     DELETE /tasks/{id} should remove the task.
     """
