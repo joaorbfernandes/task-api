@@ -121,10 +121,10 @@ This is not part of the first implementation phase.
 
 The default task workflow is:
 
-- pending
-- in_progress
-- completed
-- cancelled
+- PENDING
+- IN_PROGRESS
+- COMPLETED
+- CANCELLED
 
 This workflow is intentionally simple and sufficient for the first version of the project.
 
@@ -138,7 +138,7 @@ The following rules apply to the first version of the system.
 - A task may have a description
 - A task may have a due date
 - A task always has a status
-- New tasks start with `pending`
+- New tasks start with `PENDING`
 - PUT requires full task replacement data
 - PATCH supports partial updates
 - Comments will belong to tasks

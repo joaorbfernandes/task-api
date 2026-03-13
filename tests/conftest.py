@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.api.routers import tasks
+from app.services.task_service import TaskService, get_task_service
 
 from app.schemas.task import TaskResponse
 
@@ -18,20 +18,21 @@ def client():
     """
     Provides a TestClient instance for API tests.
 
-    Also resets the in-memory task storage before
-    and after each test to ensure isolation.
+    Overrides the task service dependency with a fresh in-memory
+    TaskService instance for each test to ensure isolation.
     """
+    test_service = TaskService()
 
-    # reset storage before test
-    tasks.tasks.clear()
-    tasks.next_id = 1
+    def override_get_task_service() -> TaskService:
+        return test_service
 
-    with TestClient(app) as client:
-        yield client
+    app.dependency_overrides[get_task_service] = override_get_task_service
 
-    # reset storage after test
-    tasks.tasks.clear()
-    tasks.next_id = 1
+    try:
+        with TestClient(app) as client:
+            yield client
+    finally:
+        app.dependency_overrides.clear()
 
 
 # ----------------------------------------
@@ -58,6 +59,11 @@ def create_task(client):
 
 @pytest.fixture
 def parse_response():
+    """
+    Validates API responses against the TaskResponse schema.
+
+    Supports both single-object and list responses.
+    """
     def _parse(data):
         if isinstance(data, list):
             return [TaskResponse.model_validate(item) for item in data]
