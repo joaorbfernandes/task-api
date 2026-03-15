@@ -42,11 +42,11 @@ Implemented so far:
 - `TaskStatus` enum
 - integration tests with pytest
 - boundary validation tests
+- service layer
+- repository layer
 
 Still missing:
 
-- service layer
-- repository layer
 - database persistence
 - comments
 - authentication
