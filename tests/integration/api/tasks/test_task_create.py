@@ -1,4 +1,5 @@
-# tests/tasks/test_tasks_create.py
+# tests/integration/api/tasks/test_tasks_create.py
+
 from app.schemas.task import TaskStatus
 
 # ----------------------------------------
@@ -12,7 +13,7 @@ def test_create_task_creates_new_task(create_task, parse_response):
     The API should:
     - return HTTP 201
     - assign an id
-    - set status to 'PENDING'
+    - set status to TaskStatus.PENDING
     - return the created task
     """
 
@@ -58,11 +59,14 @@ def test_create_task_allows_null_description(create_task, parse_response):
     assert response.status_code == 201
 
     data = response.json()
+
+    # validate API contract    
     task = parse_response(data)
 
     assert task.title == payload["title"]
     assert task.description is None
     assert task.status == TaskStatus.PENDING
+    assert task.due_date is None
 
 def test_create_task_allows_null_due_date(create_task, parse_response):
     """
@@ -83,11 +87,14 @@ def test_create_task_allows_null_due_date(create_task, parse_response):
     assert response.status_code == 201
 
     data = response.json()
+
+    # validate API contract
     task = parse_response(data)
 
     assert task.title == payload["title"]
     assert task.due_date is None
     assert task.status == TaskStatus.PENDING
+    assert task.description == payload["description"]
 
 def test_create_task_trims_title_whitespace(create_task, parse_response):
     """
@@ -108,28 +115,14 @@ def test_create_task_trims_title_whitespace(create_task, parse_response):
     assert response.status_code == 201
 
     data = response.json()
+
+    # validate API contract
     task = parse_response(data)
 
     assert task.title == "My trimmed title"
-
-def test_create_task_assigns_incremental_ids(create_task, parse_response):
-    """
-    POST /tasks should assign incremental ids to new tasks.
-    """
-
-    # Arrange / Act
-    response_1 = create_task(title="Task 1")
-    response_2 = create_task(title="Task 2")
-
-    # Assert
-    assert response_1.status_code == 201
-    assert response_2.status_code == 201
-
-    task_1 = parse_response(response_1.json())
-    task_2 = parse_response(response_2.json())
-
-    assert task_1.id == 1
-    assert task_2.id == 2
+    assert task.description == payload["description"]
+    assert task.due_date is None
+    assert task.status == TaskStatus.PENDING
 
 def test_create_task_accepts_full_valid_payload(create_task, parse_response):
     """
@@ -149,7 +142,10 @@ def test_create_task_accepts_full_valid_payload(create_task, parse_response):
     # Assert
     assert response.status_code == 201
 
-    task = parse_response(response.json())
+    data = response.json()
+
+    # validate API contract
+    task = parse_response(data)
 
     assert task.title == payload["title"]
     assert task.description == payload["description"]

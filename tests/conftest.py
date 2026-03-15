@@ -4,8 +4,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.repositories.task_repository import InMemoryTaskRepository
 from app.services.task_service import TaskService, get_task_service
-
 from app.schemas.task import TaskResponse
 
 
@@ -16,22 +16,26 @@ from app.schemas.task import TaskResponse
 @pytest.fixture
 def client():
     """
-    Provides a TestClient instance for API tests.
+    Provide a TestClient with a fresh in-memory repository and service for each test.
 
-    Overrides the task service dependency with a fresh in-memory
-    TaskService instance for each test to ensure isolation.
+    This keeps API integration tests isolated and aligned with the current
+    router -> service -> repository architecture.
     """
-    test_service = TaskService()
+    # Arrange
+    test_repository = InMemoryTaskRepository()
+    test_service = TaskService(repository=test_repository)
 
     def override_get_task_service() -> TaskService:
         return test_service
 
     app.dependency_overrides[get_task_service] = override_get_task_service
 
+    # Act
     try:
         with TestClient(app) as client:
             yield client
     finally:
+        # Cleanup
         app.dependency_overrides.clear()
 
 
@@ -40,11 +44,9 @@ def client():
 # ----------------------------------------
 
 @pytest.fixture
-def create_task(client):
+def create_task(client: TestClient):
     """
-    Factory fixture to easily create tasks in tests.
-
-    Allows overriding default fields when needed.
+    Provide a helper to create tasks through the HTTP API.
     """
 
     def _create_task(**overrides):

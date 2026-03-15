@@ -1,4 +1,4 @@
-# tests/tasks/test_tasks_read.py
+# tests/integration/api/tasks/test_tasks_read.py
 
 from app.schemas.task import TaskStatus
 
@@ -95,6 +95,8 @@ def test_list_tasks_returns_response_contract_fields(client, create_task, parse_
     assert response.status_code == 200
 
     data = response.json()
+
+    # validate API contract
     tasks = parse_response(data)
 
     assert len(tasks) == 1
@@ -146,6 +148,7 @@ def test_get_task_returns_404_when_task_does_not_exist(client):
 
     # Assert
     assert response.status_code == 404
+    assert response.json()["detail"] == "Task not found"
 
 def test_get_task_returns_due_date_when_present(client, create_task, parse_response):
     """
@@ -157,7 +160,7 @@ def test_get_task_returns_due_date_when_present(client, create_task, parse_respo
     created_task = create_task(
         title="Task with due date",
         description="original",
-        due_date=expected_due_date,
+        due_date=expected_due_date
     ).json()
     task_id = created_task["id"]
 

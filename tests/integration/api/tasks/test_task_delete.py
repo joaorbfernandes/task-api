@@ -40,3 +40,4 @@ def test_delete_task_returns_404_when_task_does_not_exist(client):
 
     # Assert
     assert response.status_code == 404
+    assert response.json()["detail"] == "Task not found"
