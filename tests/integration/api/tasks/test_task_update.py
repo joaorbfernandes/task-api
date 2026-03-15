@@ -20,7 +20,7 @@ def test_update_task_replaces_task_data(client, create_task, parse_response):
 
     updated_status = TaskStatus.IN_PROGRESS
 
-    created_task = create_task(title=original_title,description=original_description).json()
+    created_task = create_task(title=original_title, description=original_description).json()
 
     task_id = created_task["id"]
 
@@ -59,6 +59,7 @@ def test_update_task_returns_404_when_task_does_not_exist(client):
 
     # Assert
     assert response.status_code == 404
+    assert response.json()["detail"] == "Task not found"
 
 def test_update_task_allows_null_description(client, create_task, parse_response):
     """
@@ -82,7 +83,10 @@ def test_update_task_allows_null_description(client, create_task, parse_response
     # Assert
     assert response.status_code == 200
 
-    task = parse_response(response.json())
+    data = response.json()
+
+    # validate API contract
+    task = parse_response(data)
 
     assert task.title == "Updated title"
     assert task.description is None
@@ -116,7 +120,10 @@ def test_update_task_allows_null_due_date(client, create_task, parse_response):
     # Assert
     assert response.status_code == 200
 
-    task = parse_response(response.json())
+    data = response.json()
+
+    # validate API contract
+    task = parse_response(data)
 
     assert task.title == "Updated title"
     assert task.description == "updated"
@@ -138,7 +145,7 @@ def test_patch_task_updates_only_provided_fields(client, create_task, parse_resp
     original_description = "original description"
     patched_title = "Patched title"
 
-    created_task = create_task(title=original_title,description=original_description).json()
+    created_task = create_task(title=original_title, description=original_description).json()
 
     task_id = created_task["id"]
 
@@ -175,6 +182,7 @@ def test_patch_task_returns_404_when_task_does_not_exist(client):
 
     # Assert
     assert response.status_code == 404
+    assert response.json()["detail"] == "Task not found"
 
 def test_patch_task_with_empty_body_does_not_change_fields(client, create_task, parse_response):
     """
@@ -185,7 +193,7 @@ def test_patch_task_with_empty_body_does_not_change_fields(client, create_task, 
     original_title = "Task"
     original_description = "desc"
 
-    created_task = create_task(title=original_title,description=original_description).json()
+    created_task = create_task(title=original_title, description=original_description).json()
 
     task_id = created_task["id"]
 
@@ -225,7 +233,10 @@ def test_patch_task_allows_null_description(client, create_task, parse_response)
     # Assert
     assert response.status_code == 200
 
-    task = parse_response(response.json())
+    data = response.json()
+
+    # validate API contract
+    task = parse_response(data)
 
     assert task.title == "Original title"
     assert task.description is None
@@ -257,7 +268,10 @@ def test_patch_task_allows_null_due_date(client, create_task, parse_response):
     # Assert
     assert response.status_code == 200
 
-    task = parse_response(response.json())
+    data = response.json()
+
+    # validate API contract
+    task = parse_response(data)
 
     assert task.title == original_title
     assert task.description == original_description

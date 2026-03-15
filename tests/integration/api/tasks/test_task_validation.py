@@ -1,4 +1,5 @@
-# tests/tasks/test_tasks_validation.py
+# tests/integration/api/tasks/test_tasks_validation.py
+
 import pytest
 from app.schemas.task import TaskStatus
 
@@ -57,7 +58,7 @@ def test_create_task_fails_when_extra_field_provided(client):
         ("a" * 121, 422),   # above maximum
     ],
 )
-def test_create_task_title_boundaries(client, title, expected_status):
+def test_create_task_validates_title_length_boundaries(client, title, expected_status):
 
     # Arrange
     payload = {"title": title, "description": "valid description", "due_date": None}
@@ -76,7 +77,7 @@ def test_create_task_title_boundaries(client, title, expected_status):
         ("a" * 501, 422),    # above maximum
     ],
 )
-def test_create_task_description_boundaries(client, description, expected_status):
+def test_create_task_validates_description_length_boundaries(client, description, expected_status):
 
     # Arrange
     payload = {"title": "valid title", "description": description, "due_date": None}
@@ -361,6 +362,25 @@ def test_update_task_fails_when_description_has_invalid_type(client, create_task
         "title": "Updated title",
         "description": 2344,
         "status": TaskStatus.IN_PROGRESS.value,
+        "due_date": None,
+    }
+
+    # Act
+    response = client.put(f"/tasks/{task_id}", json=payload)
+
+    # Assert
+    assert response.status_code == 422
+
+def test_update_task_requires_status_field(client, create_task):
+    """
+    PUT /tasks/{id} should return 422 when status is missing.
+    """
+    # Arrange
+    task_id = create_task().json()["id"]
+
+    payload = {
+        "title": "Updated title",
+        "description": "updated",
         "due_date": None,
     }
 
