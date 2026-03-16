@@ -7,7 +7,7 @@ import pytest
 from app.domain.entities.task import Task
 
 from app.repositories.task_repository import InMemoryTaskRepository
-from app.schemas.task import TaskStatus
+from app.domain.enums.task_status import TaskStatus
 
 
 @pytest.fixture

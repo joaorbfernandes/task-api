@@ -1,20 +1,14 @@
 # api/schemas/task.py
 
 from datetime import date, datetime
-from enum import Enum
 from typing import Annotated
+from app.domain.enums.task_status import TaskStatus
 
 from pydantic import BaseModel, ConfigDict, StringConstraints, model_validator
 
 
 TitleStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=120)]
 DescStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
-
-class TaskStatus(str, Enum):
-    PENDING = "pending"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
 
 
 class TaskCreate(BaseModel):

@@ -1,6 +1,6 @@
 # tests/tasks/test_tasks_update.py
 
-from app.schemas.task import TaskStatus
+from app.domain.enums.task_status import TaskStatus
 
 # ----------------------------------------
 # PUT /tasks/{id}

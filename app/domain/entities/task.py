@@ -1,6 +1,8 @@
+# app/domain/entities/task.py
+
 from datetime import date, datetime
 
-from app.schemas.task import TaskStatus
+from app.domain.enums.task_status import TaskStatus
 
 
 class Task:

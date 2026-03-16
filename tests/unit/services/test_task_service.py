@@ -6,7 +6,8 @@ from unittest.mock import Mock
 
 from app.domain.entities.task import Task
 from app.repositories.task_repository import TaskRepository
-from app.schemas.task import TaskCreate, TaskPatch, TaskStatus, TaskUpdate
+from app.domain.enums.task_status import TaskStatus
+from app.schemas.task import TaskCreate, TaskPatch, TaskUpdate
 from app.services.task_service import TaskNotFoundError, TaskService
 
 

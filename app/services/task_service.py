@@ -1,8 +1,9 @@
 from datetime import UTC, datetime
 
 from app.domain.entities.task import Task
+from app.domain.enums.task_status import TaskStatus
 from app.repositories.task_repository import TaskRepository, get_task_repository
-from app.schemas.task import TaskCreate, TaskPatch, TaskStatus, TaskUpdate
+from app.schemas.task import TaskCreate, TaskPatch, TaskUpdate
 
 
 class TaskNotFoundError(Exception):
