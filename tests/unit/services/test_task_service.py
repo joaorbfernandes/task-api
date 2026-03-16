@@ -4,7 +4,8 @@ import pytest
 from datetime import date, datetime
 from unittest.mock import Mock
 
-from app.repositories.task_repository import Task, TaskRepository
+from app.domain.entities.task import Task
+from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskCreate, TaskPatch, TaskStatus, TaskUpdate
 from app.services.task_service import TaskNotFoundError, TaskService
 
@@ -281,6 +282,37 @@ def test_update_task_allows_description_and_due_date_to_be_none(task_service: Ta
     repository.get_task.assert_called_once_with(1)
     repository.save_task.assert_called_once_with(existing_task)
 
+def test_update_task_does_not_save_when_no_real_changes(task_service: TaskService, repository: Mock):
+    """
+    update_task should not save the task when the payload does not change any field.
+    """
+    # Arrange
+    existing_task = build_task(
+        task_id=1,
+        title="Original title",
+        description="original",
+        status=TaskStatus.IN_PROGRESS,
+        due_date=date(2026, 3, 20)
+    )
+    repository.get_task.return_value = existing_task
+
+    task_update = TaskUpdate(
+        title="Original title",
+        description="original",
+        status=TaskStatus.IN_PROGRESS,
+        due_date=date(2026, 3, 20)
+    )
+
+    # Act
+    result = task_service.update_task(1, task_update)
+
+    # Assert
+    assert result is existing_task
+    assert result.updated_at is None
+
+    repository.get_task.assert_called_once_with(1)
+    repository.save_task.assert_not_called()
+
 # ----------------------------------------
 # patch_task
 # ----------------------------------------
@@ -290,9 +322,7 @@ def test_patch_task_updates_only_title_when_title_is_provided(task_service: Task
     patch_task should update only the title when title is explicitly provided.
     """
     # Arrange
-    existing_task = build_task(task_id=1, title="Original title")
-    existing_task.description = "original description"
-    existing_task.due_date = None
+    existing_task = build_task(task_id=1, title="Original title", description="original description", due_date=None)
 
     repository.get_task.return_value = existing_task
 
@@ -319,9 +349,7 @@ def test_patch_task_updates_description_to_none_when_explicitly_provided(task_se
     patch_task should update description to None when it is explicitly provided.
     """
     # Arrange
-    existing_task = build_task(task_id=1, title="Original title")
-    existing_task.description = "original description"
-    existing_task.due_date = None
+    existing_task = build_task(task_id=1, title="Original title", description="original description", due_date=None)
 
     repository.get_task.return_value = existing_task
 
@@ -348,9 +376,7 @@ def test_patch_task_updates_status_when_explicitly_provided(task_service: TaskSe
     patch_task should update status when it is explicitly provided.
     """
     # Arrange
-    existing_task = build_task(task_id=1, title="Original title")
-    existing_task.description = "original description"
-    existing_task.due_date = None
+    existing_task = build_task(task_id=1, title="Original title", description="original description", due_date=None)
 
     repository.get_task.return_value = existing_task
 
@@ -377,9 +403,7 @@ def test_patch_task_updates_due_date_when_explicitly_provided(task_service: Task
     patch_task should update due_date when it is explicitly provided.
     """
     # Arrange
-    existing_task = build_task(task_id=1, title="Original title")
-    existing_task.description = "original description"
-    existing_task.due_date = None
+    existing_task = build_task(task_id=1, title="Original title", description="original description", due_date=None)
 
     repository.get_task.return_value = existing_task
 
@@ -401,32 +425,32 @@ def test_patch_task_updates_due_date_when_explicitly_provided(task_service: Task
     repository.get_task.assert_called_once_with(1)
     repository.save_task.assert_called_once_with(existing_task)
 
-def test_patch_task_keeps_existing_fields_when_patch_body_is_empty(task_service: TaskService, repository: Mock):
+def test_patch_task_does_not_save_when_value_is_equal_to_current_one(task_service: TaskService, repository: Mock):
     """
-    patch_task should keep existing fields unchanged when no patch fields are provided.
+    patch_task should not save the task when the provided field value is equal to the current one.
     """
     # Arrange
-    existing_task = build_task(task_id=1, title="Original title", description = "original description", due_date = date(2026, 3, 20))
-
+    existing_task = build_task(
+        task_id=1,
+        title="Original title",
+        description="original description",
+        due_date=None
+    )
     repository.get_task.return_value = existing_task
 
-    task_patch = TaskPatch()
-
-    repository.save_task.side_effect = save_task_side_effect
+    task_patch = TaskPatch(title="Original title")
 
     # Act
     result = task_service.patch_task(1, task_patch)
 
     # Assert
-    assert result.id == 1
+    assert result is existing_task
     assert result.title == "Original title"
-    assert result.description == "original description"
-    assert result.status == TaskStatus.PENDING
-    assert result.due_date == date(2026, 3, 20)
-    assert result.updated_at is not None
+    assert result.updated_at is None
 
     repository.get_task.assert_called_once_with(1)
-    repository.save_task.assert_called_once_with(existing_task)
+    repository.save_task.assert_not_called()
+
 
 def test_patch_task_raises_when_repository_returns_none(task_service: TaskService, repository: Mock):
     """

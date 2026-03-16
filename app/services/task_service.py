@@ -1,8 +1,7 @@
-# app/services/task_service.py
-
 from datetime import UTC, datetime
 
-from app.repositories.task_repository import Task, TaskRepository, get_task_repository
+from app.domain.entities.task import Task
+from app.repositories.task_repository import TaskRepository, get_task_repository
 from app.schemas.task import TaskCreate, TaskPatch, TaskStatus, TaskUpdate
 
 
@@ -19,7 +18,7 @@ class TaskService:
         return datetime.now(UTC).replace(microsecond=0)
 
     def _build_task(self, task_id: int, task: TaskCreate) -> Task:
-        """Build the internal task data object for a new task."""
+        """Build the internal task entity for a new task."""
         return Task(
             id=task_id,
             title=task.title,
@@ -53,33 +52,42 @@ class TaskService:
         """Fully replace task data using the validated PUT payload."""
         task = self.get_task(task_id)
 
-        task.title = task_update.title
-        task.description = task_update.description
-        task.status = task_update.status
-        task.due_date = task_update.due_date
-        task.updated_at = self._current_timestamp()
+        changed = task.update(
+            title=task_update.title,
+            description=task_update.description,
+            status=task_update.status,
+            due_date=task_update.due_date,
+        )
 
-        return self._repository.save_task(task)
+        if changed:
+            task.mark_updated(self._current_timestamp())
+            return self._repository.save_task(task)
+
+        return task
 
     def patch_task(self, task_id: int, task_patch: TaskPatch) -> Task:
         """Partially update task fields that were explicitly provided."""
         task = self.get_task(task_id)
 
+        changed = False
+
         if "title" in task_patch.model_fields_set:
-            task.title = task_patch.title
+            changed = task.rename(task_patch.title) or changed
 
         if "description" in task_patch.model_fields_set:
-            task.description = task_patch.description
+            changed = task.change_description(task_patch.description) or changed
 
         if "status" in task_patch.model_fields_set:
-            task.status = task_patch.status
+            changed = task.change_status(task_patch.status) or changed
 
         if "due_date" in task_patch.model_fields_set:
-            task.due_date = task_patch.due_date
+            changed = task.change_due_date(task_patch.due_date) or changed
 
-        task.updated_at = self._current_timestamp()
+        if changed:
+            task.mark_updated(self._current_timestamp())
+            return self._repository.save_task(task)
 
-        return self._repository.save_task(task)
+        return task
 
     def delete_task(self, task_id: int) -> None:
         """Delete a task by id or raise TaskNotFoundError if it does not exist."""
