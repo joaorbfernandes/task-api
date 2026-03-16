@@ -58,6 +58,9 @@ class TaskPatch(BaseModel):
 
     @model_validator(mode="after")
     def validate_patch_non_nullable_fields(self):
+        if not self.model_fields_set:
+            raise ValueError("at least one field must be provided")
+
         if "title" in self.model_fields_set and self.title is None:
             raise ValueError("title cannot be null")
 
