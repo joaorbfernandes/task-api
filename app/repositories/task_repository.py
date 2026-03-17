@@ -1,22 +1,8 @@
 # app/repositories/task_repository.py
 
 from abc import ABC, abstractmethod
-from datetime import date, datetime
-from dataclasses import dataclass
 
-from app.schemas.task import TaskStatus
-
-
-@dataclass
-class Task:
-    id: int
-    title: str
-    description: str | None
-    status: TaskStatus
-    due_date: date | None
-    created_at: datetime
-    updated_at: datetime | None
-
+from app.domain.entities.task import Task
 
 class TaskRepository(ABC):
     @abstractmethod

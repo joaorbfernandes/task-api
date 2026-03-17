@@ -4,8 +4,10 @@ from datetime import datetime
 
 import pytest
 
-from app.repositories.task_repository import InMemoryTaskRepository, Task
-from app.schemas.task import TaskStatus
+from app.domain.entities.task import Task
+
+from app.repositories.task_repository import InMemoryTaskRepository
+from app.domain.enums.task_status import TaskStatus
 
 
 @pytest.fixture

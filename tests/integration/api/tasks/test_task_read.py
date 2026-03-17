@@ -1,6 +1,6 @@
 # tests/integration/api/tasks/test_tasks_read.py
 
-from app.schemas.task import TaskStatus
+from app.domain.enums.task_status import TaskStatus
 
 # ----------------------------------------
 # GET /tasks

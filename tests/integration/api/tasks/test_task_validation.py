@@ -1,7 +1,7 @@
 # tests/integration/api/tasks/test_tasks_validation.py
 
 import pytest
-from app.schemas.task import TaskStatus
+from app.domain.enums.task_status import TaskStatus
 
 # ----------------------------------------
 # GET /tasks/{id} validation
@@ -501,6 +501,21 @@ def test_patch_task_fails_when_description_has_invalid_type(client, create_task)
     task_id = create_task().json()["id"]
 
     payload = {"description": 123}
+
+    # Act
+    response = client.patch(f"/tasks/{task_id}", json=payload)
+
+    # Assert
+    assert response.status_code == 422
+
+def test_patch_task_fails_when_body_is_empty(client, create_task):
+    """
+    PATCH /tasks/{id} should return 422 when the request body is empty.
+    """
+
+    # Arrange
+    task_id = create_task(title="Task", description="desc").json()["id"]
+    payload = {}
 
     # Act
     response = client.patch(f"/tasks/{task_id}", json=payload)
