@@ -3,7 +3,7 @@
 from datetime import date, datetime
 
 from app.domain.enums.task_status import TaskStatus
-from app.domain.errors import InvalidTaskDueDateError, InvalidTaskStatusTransitionError, TaskNotEditableError
+from app.domain.errors.errors import InvalidTaskDueDateError, InvalidTaskStatusTransitionError, TaskNotEditableError
 
 
 STATUS_TRANSITIONS = {

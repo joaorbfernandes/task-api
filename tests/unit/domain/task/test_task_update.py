@@ -6,7 +6,7 @@ import pytest
 from tests.unit.domain.task.helpers import build_task
 
 from app.domain.enums.task_status import TaskStatus
-from app.domain.errors import TaskNotEditableError, InvalidTaskStatusTransitionError, InvalidTaskDueDateError
+from app.domain.errors.errors import TaskNotEditableError, InvalidTaskStatusTransitionError, InvalidTaskDueDateError
 
 
 # ----------------------------------------
