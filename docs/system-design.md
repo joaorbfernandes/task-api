@@ -56,6 +56,13 @@ Other entities such as comments or users may be introduced later, but they are n
 
 ### Task Rules
 
+#### Initial state invariants
+- a Task must be created in a valid state
+- due_date cannot be earlier than the current date
+- IN_PROGRESS requires due_date
+- COMPLETED cannot start blocked
+- CANCELLED cannot start blocked
+
 #### Main lifecycle status
 
 | Status |
@@ -71,18 +78,27 @@ Other entities such as comments or users may be introduced later, but they are n
 |---|---|
 | `is_blocked` | Indicates that the task is temporarily blocked |
 
+#### Declarative update behaviour
+
+| Rule |
+|---|
+| `update()` validates the final target state of the task |
+| `update()` does not execute incremental transitions internally |
+| `update()` does not automatically clear `is_blocked` |
+| A final state such as `IN_PROGRESS + is_blocked=True` is valid if the full target state is valid |
+
 #### Status transitions
 
 | From | To | Allowed | Notes |
 |---|---|---|---|
-| `PENDING` | `IN_PROGRESS` | Yes | If blocked, this transition clears `is_blocked` |
-| `PENDING` | `CANCELLED` | Yes |  |
-| `PENDING` | `COMPLETED` | No |  |
-| `IN_PROGRESS` | `COMPLETED` | Yes |  |
-| `IN_PROGRESS` | `CANCELLED` | Yes | If blocked, this transition clears `is_blocked` |
-| `IN_PROGRESS` | `PENDING` | No |  |
-| `COMPLETED` | any | No | Terminal state |
-| `CANCELLED` | any | No | Terminal state |
+| `PENDING` | `IN_PROGRESS` | Yes |
+| `PENDING` | `CANCELLED` | Yes |
+| `PENDING` | `COMPLETED` | No |
+| `IN_PROGRESS` | `COMPLETED` | Yes |
+| `IN_PROGRESS` | `CANCELLED` | Yes |
+| `IN_PROGRESS` | `PENDING` | No |
+| `COMPLETED` | any | No |
+| `CANCELLED` | any | No |
 
 #### Block rules
 
@@ -104,6 +120,8 @@ Other entities such as comments or users may be introduced later, but they are n
 | Set `is_blocked=True` in `CANCELLED` | No | Invalid domain operation |
 | Set `is_blocked=False` when blocked | Yes | Task becomes unblocked |
 | Set `is_blocked=False` when already unblocked | Yes | No real change |
+
+
 
 ##### Blocked status transition behaviour
 
