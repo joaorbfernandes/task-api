@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from app.domain.entities.task import Task
 from app.domain.enums.task_status import TaskStatus
-from app.repositories.task_repository import TaskRepository, get_task_repository
+from app.infrastructure.repositories.task_repository import TaskRepository, get_task_repository
 from app.schemas.task import TaskCreate, TaskPatch, TaskUpdate
 
 
@@ -19,7 +19,6 @@ class TaskService:
         return datetime.now(UTC).replace(microsecond=0)
 
     def _build_task(self, task_id: int, task: TaskCreate) -> Task:
-        """Build the internal task entity for a new task."""
         return Task(
             id=task_id,
             title=task.title,
@@ -28,6 +27,7 @@ class TaskService:
             due_date=task.due_date,
             created_at=self._current_timestamp(),
             updated_at=None,
+            is_blocked=task.is_blocked
         )
 
     def list_tasks(self) -> list[Task]:
@@ -58,6 +58,7 @@ class TaskService:
             description=task_update.description,
             status=task_update.status,
             due_date=task_update.due_date,
+            is_blocked=task_update.is_blocked
         )
 
         if changed:
@@ -70,19 +71,19 @@ class TaskService:
         """Partially update task fields that were explicitly provided."""
         task = self.get_task(task_id)
 
-        changed = False
+        title = task_patch.title if "title" in task_patch.model_fields_set else task.title
+        description = task_patch.description if "description" in task_patch.model_fields_set else task.description
+        status = task_patch.status if "status" in task_patch.model_fields_set else task.status
+        due_date = task_patch.due_date if "due_date" in task_patch.model_fields_set else task.due_date
+        is_blocked = task_patch.is_blocked if "is_blocked" in task_patch.model_fields_set else task.is_blocked
 
-        if "title" in task_patch.model_fields_set:
-            changed = task.rename(task_patch.title) or changed
-
-        if "description" in task_patch.model_fields_set:
-            changed = task.change_description(task_patch.description) or changed
-
-        if "status" in task_patch.model_fields_set:
-            changed = task.change_status(task_patch.status) or changed
-
-        if "due_date" in task_patch.model_fields_set:
-            changed = task.change_due_date(task_patch.due_date) or changed
+        changed = task.update(
+            title=title,
+            description=description,
+            status=status,
+            due_date=due_date,
+            is_blocked=is_blocked
+        )
 
         if changed:
             task.mark_updated(self._current_timestamp())
