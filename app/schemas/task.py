@@ -18,6 +18,7 @@ class TaskCreate(BaseModel):
     title: TitleStr
     description: DescStr | None = None
     due_date: date | None = None
+    is_blocked: bool = False
 
 
 class TaskResponse(BaseModel):
@@ -29,6 +30,7 @@ class TaskResponse(BaseModel):
     due_date: date | None = None
     created_at: datetime
     updated_at: datetime | None = None
+    is_blocked: bool
 
 
 class TaskUpdate(BaseModel):
@@ -39,6 +41,7 @@ class TaskUpdate(BaseModel):
     description: DescStr | None
     status: TaskStatus
     due_date: date | None
+    is_blocked: bool
 
 
 class TaskPatch(BaseModel):
@@ -49,6 +52,7 @@ class TaskPatch(BaseModel):
     description: DescStr | None = None
     status: TaskStatus | None = None
     due_date: date | None = None
+    is_blocked: bool | None = None
 
     @model_validator(mode="after")
     def validate_patch_non_nullable_fields(self):
@@ -60,5 +64,8 @@ class TaskPatch(BaseModel):
 
         if "status" in self.model_fields_set and self.status is None:
             raise ValueError("status cannot be null")
+        
+        if "is_blocked" in self.model_fields_set and self.is_blocked is None:
+            raise ValueError("is_blocked cannot be null")
 
         return self
