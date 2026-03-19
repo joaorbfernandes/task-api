@@ -3,7 +3,7 @@
 from datetime import date
 import pytest
 
-from tests.unit.domain.task.helpers import build_task
+from tests.factories.task import build_task
 
 from app.domain.enums.task_status import TaskStatus
 from app.domain.errors.errors import InvalidTaskStatusTransitionError, InvalidTaskDueDateError

@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from tests.unit.domain.task.helpers import build_task
+from tests.factories.task import build_task
 
 from app.domain.enums.task_status import TaskStatus
 
