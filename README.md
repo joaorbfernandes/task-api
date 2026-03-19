@@ -63,12 +63,20 @@ The project follows a layered backend structure:
 
 ```text
 app/
-├── api/          # HTTP layer
-├── domain/       # domain entities and rules
-├── services/     # application orchestration
-├── repositories/ # persistence layer
-├── schemas/      # request and response schemas
-└── main.py       # application entrypoint
+├── api/
+│   ├── routers/         # HTTP endpoints
+│   └── schemas/         # HTTP request and response schemas
+├── application/
+│   ├── dtos/            # application input models
+│   ├── mappers/         # schema-to-application mapping
+│   └── services/        # application orchestration
+├── domain/
+│   ├── entities/        # domain entities and behaviour
+│   ├── enums/           # domain enums
+│   └── errors/          # domain exceptions
+├── infrastructure/
+│   └── repositories/    # persistence implementation
+└── main.py              # application entrypoint
 ```
 
 ## API Endpoints
@@ -88,9 +96,8 @@ app/
 
 The project uses:
 
-- unit tests for isolated behaviour
-- integration tests for HTTP and API behaviour
-- system tests for basic service checks
+- unit tests for isolated domain, service, mapper, repository and schema behaviour
+- integration tests for HTTP contract and API behaviour
 
 Tests follow the AAA pattern:
 

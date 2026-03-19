@@ -2,7 +2,7 @@
 
 ## Overview
 
-TM is a Task Manager API built as a backend engineering project.
+Task-API is a Task Manager API built as a backend engineering project.
 
 The goal is to keep the product small and clear while evolving the internal architecture in a professional way.
 
@@ -12,32 +12,41 @@ The project focuses on:
 
 - task CRUD operations
 - request validation
-- testing
+- unit and integration testing
 - architecture refactoring
-- domain and persistence separation
-- layered backend structure
+- API, application, domain and infrastructure separation
+- layered backend structure with explicit responsibility boundaries
 
 ## Architecture
 
-The current structure is:
+The current request flow is:
 
 ```text
-routers
+HTTP request
 ↓
-services
+API schemas
 ↓
-domain
+application mappers
 ↓
-repositories
+application DTOs
+↓
+application services
+↓
+domain entities
+↓
+infrastructure repositories
 ↓
 in-memory storage
 ```
 
 Responsibilities are separated as follows:
-- routers handle HTTP concerns
-- services orchestrate application behaviour
-- repositories handle persistence
-- domain entities hold business rules
+- routers handle HTTP concerns and endpoint orchestration
+- API schemas define request and response contracts
+- mappers translate API input into application input models
+- DTOs represent application-level input data
+- services coordinate application behaviour and use cases
+- domain entities enforce business rules and state consistency
+- infrastructure repositories handle persistence
 
 ## Core Domain
 
@@ -57,6 +66,7 @@ Other entities such as comments or users may be introduced later, but they are n
 ### Task Rules
 
 #### Initial state invariants
+
 - a Task must be created in a valid state
 - due_date cannot be earlier than the current date
 - IN_PROGRESS requires due_date
@@ -120,8 +130,6 @@ Other entities such as comments or users may be introduced later, but they are n
 | Set `is_blocked=True` in `CANCELLED` | No | Invalid domain operation |
 | Set `is_blocked=False` when blocked | Yes | Task becomes unblocked |
 | Set `is_blocked=False` when already unblocked | Yes | No real change |
-
-
 
 ##### Blocked status transition behaviour
 
