@@ -1,6 +1,10 @@
 # tests/integration/api/tasks/test_tasks_read.py
 
 from app.domain.enums.task_status import TaskStatus
+from tests.factories.task import future_date
+
+
+valid_due_date = future_date()
 
 # ----------------------------------------
 # GET /tasks
@@ -156,7 +160,7 @@ def test_get_task_returns_due_date_when_present(client, create_task, parse_respo
     """
 
     # Arrange
-    expected_due_date = "2026-03-20"
+    expected_due_date = valid_due_date.isoformat()
     created_task = create_task(
         title="Task with due date",
         description="original",

@@ -1,11 +1,7 @@
 from datetime import date
 
 from app.application.dtos.task_dto import CreateTaskInput, UpdateTaskInput
-from app.application.mappers.task_mapper import (
-    map_task_create_to_input,
-    map_task_update_to_input,
-    merge_task_patch_into_update_input,
-)
+from app.application.mappers.task_mapper import map_task_create_to_input, map_task_update_to_input, merge_task_patch_into_update_input
 from app.domain.enums.task_status import TaskStatus
 from app.schemas.task import TaskCreate, TaskPatch, TaskUpdate
 from tests.factories.task import build_task

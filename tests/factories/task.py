@@ -1,6 +1,6 @@
-# tests/unit/domain/helpers.py
+# tests/factories/helpers.py
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from app.domain.entities.task import Task
 from app.domain.enums.task_status import TaskStatus
@@ -27,3 +27,6 @@ def build_task(
         updated_at=updated_at,
         is_blocked=is_blocked
     )
+
+def future_date(days: int = 1) -> date:
+    return date.today() + timedelta(days=days)

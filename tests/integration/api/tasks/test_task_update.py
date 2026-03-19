@@ -1,6 +1,9 @@
 # tests/tasks/test_tasks_update.py
 
 from app.domain.enums.task_status import TaskStatus
+from tests.factories.task import future_date
+
+valid_due_date = future_date()
 
 # ----------------------------------------
 # PUT /tasks/{id}
@@ -17,14 +20,13 @@ def test_update_task_replaces_task_data(client, create_task, parse_response):
 
     updated_title = "Updated title"
     updated_description = "updated"
-
     updated_status = TaskStatus.IN_PROGRESS
 
     created_task = create_task(title=original_title, description=original_description).json()
 
     task_id = created_task["id"]
 
-    payload = {"title": updated_title, "description": updated_description, "due_date": None, "status": updated_status.value}
+    payload = {"title": updated_title, "description": updated_description, "due_date": valid_due_date.isoformat(), "status": updated_status.value, "is_blocked": False}
     
     # Act
     response = client.put(f"/tasks/{task_id}",json=payload)
@@ -42,7 +44,7 @@ def test_update_task_replaces_task_data(client, create_task, parse_response):
     assert task.description == updated_description
     assert task.status == updated_status
     assert task.updated_at is not None
-    assert task.due_date is None
+    assert task.due_date == valid_due_date
     assert task.created_at is not None
 
 def test_update_task_returns_404_when_task_does_not_exist(client):
@@ -52,7 +54,7 @@ def test_update_task_returns_404_when_task_does_not_exist(client):
 
     # Arrange
     non_existing_id = 999
-    payload = {"title": "Updated title","description": "updated", "status": TaskStatus.PENDING.value, "due_date": None}
+    payload = {"title": "Updated title","description": "updated", "status": TaskStatus.PENDING.value, "due_date": None, "is_blocked": False}
 
     # Act
     response = client.put(f"/tasks/{non_existing_id}", json=payload)
@@ -74,7 +76,8 @@ def test_update_task_allows_null_description(client, create_task, parse_response
         "title": "Updated title",
         "description": None,
         "status": TaskStatus.IN_PROGRESS.value,
-        "due_date": None,
+        "due_date": valid_due_date.isoformat(),
+        "is_blocked": False
     }
 
     # Act
@@ -85,13 +88,13 @@ def test_update_task_allows_null_description(client, create_task, parse_response
 
     data = response.json()
 
-    # validate API contract
+    # valid API contract
     task = parse_response(data)
 
     assert task.title == "Updated title"
     assert task.description is None
     assert task.status == TaskStatus.IN_PROGRESS
-    assert task.due_date is None
+    assert task.due_date == valid_due_date
     assert task.updated_at is not None
 
 def test_update_task_allows_null_due_date(client, create_task, parse_response):
@@ -107,11 +110,13 @@ def test_update_task_allows_null_due_date(client, create_task, parse_response):
     ).json()
     task_id = created_task["id"]
 
+
     payload = {
         "title": "Updated title",
         "description": "updated",
-        "status": TaskStatus.IN_PROGRESS.value,
-        "due_date": None,
+        "status": TaskStatus.PENDING.value,
+        "due_date": valid_due_date.isoformat(),
+        "is_blocked": False
     }
 
     # Act
@@ -127,8 +132,8 @@ def test_update_task_allows_null_due_date(client, create_task, parse_response):
 
     assert task.title == "Updated title"
     assert task.description == "updated"
-    assert task.status == TaskStatus.IN_PROGRESS
-    assert task.due_date is None
+    assert task.status == TaskStatus.PENDING
+    assert task.due_date == valid_due_date
     assert task.updated_at is not None
 
 # ----------------------------------------
@@ -224,7 +229,7 @@ def test_patch_task_allows_null_due_date(client, create_task, parse_response):
     created_task = create_task(
         title=original_title,
         description=original_description,
-        due_date="2026-03-20",
+        due_date=valid_due_date.isoformat(),
     ).json()
     task_id = created_task["id"]
 
