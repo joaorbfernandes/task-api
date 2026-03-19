@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.domain.enums.task_status import TaskStatus
-from app.schemas.task import TaskCreate, TaskPatch
+from app.api.schemas.task import TaskCreate, TaskPatch
 
 
 # ----------------------------------------

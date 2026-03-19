@@ -7,7 +7,7 @@ import pytest
 
 from app.domain.entities.task import Task
 from app.domain.enums.task_status import TaskStatus
-from app.domain.errors.errors import InvalidTaskDueDateError
+from app.domain.errors.task import InvalidTaskDueDateError
 from app.infrastructure.repositories.task_repository import TaskRepository
 from app.application.services.task_service import TaskNotFoundError, TaskService
 from tests.factories.task import build_task

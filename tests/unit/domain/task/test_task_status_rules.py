@@ -6,7 +6,7 @@ import pytest
 from tests.factories.task import build_task
 
 from app.domain.enums.task_status import TaskStatus
-from app.domain.errors.errors import InvalidTaskStatusTransitionError, InvalidTaskDueDateError
+from app.domain.errors.task import InvalidTaskStatusTransitionError, InvalidTaskDueDateError
 
 
 # ----------------------------------------

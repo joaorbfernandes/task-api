@@ -4,8 +4,6 @@ from app.application.dtos.task_dto import CreateTaskInput, UpdateTaskInput
 from app.domain.entities.task import Task
 from app.domain.enums.task_status import TaskStatus
 from app.infrastructure.repositories.task_repository import TaskRepository, get_task_repository
-# from app.schemas.task import TaskCreate, TaskPatch, TaskUpdate
-
 
 class TaskNotFoundError(Exception):
     """Raised when a task does not exist."""
@@ -74,33 +72,6 @@ class TaskService:
         """Delete a task by id or raise TaskNotFoundError if it does not exist."""
         self.get_task(task_id)
         self._repository.delete_task(task_id)
-
-    '''
-    def patch_task(self, task_id: int, task_patch: PatchTaskInput) -> Task:
-        """Partially update task fields that were explicitly provided."""
-        task = self.get_task(task_id)
-
-        title = task_patch.title if task_patch.has_title else task.title
-        description = task_patch.description if task_patch.has_description else task.description
-        status = task_patch.status if task_patch.has_status else task.status
-        due_date = task_patch.due_date if task_patch.has_due_date else task.due_date
-        is_blocked = task_patch.is_blocked if task_patch.has_is_blocked else task.is_blocked
-        
-        changed = task.update(
-            title=title,
-            description=description,
-            status=status,
-            due_date=due_date,
-            is_blocked=is_blocked
-        )
-
-        if changed:
-            task.mark_updated(self._current_timestamp())
-            return self._repository.save_task(task)
-
-        return task
-
-    '''
 
 
 def get_task_service() -> TaskService:

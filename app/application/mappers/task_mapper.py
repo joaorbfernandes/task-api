@@ -2,7 +2,7 @@
 
 from app.application.dtos.task_dto import CreateTaskInput, UpdateTaskInput
 from app.domain.entities.task import Task
-from app.schemas.task import TaskCreate, TaskPatch, TaskUpdate
+from app.api.schemas.task import TaskCreate, TaskPatch, TaskUpdate
 
 
 def map_task_create_to_input(task_create: TaskCreate) -> CreateTaskInput:

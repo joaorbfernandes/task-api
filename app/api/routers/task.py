@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.schemas.task import TaskCreate, TaskPatch, TaskResponse, TaskUpdate
+from app.api.schemas.task import TaskCreate, TaskPatch, TaskResponse, TaskUpdate
 from app.application.services.task_service import TaskNotFoundError, TaskService, get_task_service
 from app.application.mappers.task_mapper import map_task_create_to_input, map_task_update_to_input, merge_task_patch_into_update_input
 
