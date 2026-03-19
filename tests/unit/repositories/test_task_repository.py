@@ -6,7 +6,7 @@ import pytest
 
 from app.domain.entities.task import Task
 
-from app.repositories.task_repository import InMemoryTaskRepository
+from app.infrastructure.repositories.task_repository import InMemoryTaskRepository
 from app.domain.enums.task_status import TaskStatus
 
 

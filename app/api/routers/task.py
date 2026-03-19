@@ -2,8 +2,9 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.schemas.task import TaskCreate, TaskPatch, TaskResponse, TaskUpdate
-from app.services.task_service import TaskNotFoundError, TaskService, get_task_service
+from app.api.schemas.task import TaskCreate, TaskPatch, TaskResponse, TaskUpdate
+from app.application.services.task_service import TaskNotFoundError, TaskService, get_task_service
+from app.application.mappers.task_mapper import map_task_create_to_input, map_task_update_to_input, merge_task_patch_into_update_input
 
 router = APIRouter()
 
@@ -17,7 +18,8 @@ def list_tasks(task_service: TaskService = Depends(get_task_service)):
 @router.post("/tasks", response_model=TaskResponse, status_code=201)
 def create_task(task: TaskCreate, task_service: TaskService = Depends(get_task_service)):
     """Create a new task."""
-    return task_service.create_task(task)
+    task_input = map_task_create_to_input(task)
+    return task_service.create_task(task_input)
 
 
 @router.get("/tasks/{task_id}", response_model=TaskResponse, status_code=200)
@@ -33,7 +35,8 @@ def get_task(task_id: int, task_service: TaskService = Depends(get_task_service)
 def update_task(task_id: int, task_update: TaskUpdate, task_service: TaskService = Depends(get_task_service)):
     """Fully replace task data."""
     try:
-        return task_service.update_task(task_id, task_update)
+        task_input = map_task_update_to_input(task_update)
+        return task_service.update_task(task_id, task_input)
     except TaskNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -42,7 +45,9 @@ def update_task(task_id: int, task_update: TaskUpdate, task_service: TaskService
 def patch_task(task_id: int, task_patch: TaskPatch, task_service: TaskService = Depends(get_task_service)):
     """Partially update task fields."""
     try:
-        return task_service.patch_task(task_id, task_patch)
+        current_task = task_service.get_task(task_id)
+        task_input = merge_task_patch_into_update_input(current_task, task_patch)
+        return task_service.update_task(task_id, task_input)
     except TaskNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

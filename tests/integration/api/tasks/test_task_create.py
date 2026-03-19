@@ -1,6 +1,10 @@
 # tests/integration/api/tasks/test_tasks_create.py
 
 from app.domain.enums.task_status import TaskStatus
+from tests.factories.task import future_date
+
+
+valid_due_date = future_date()
 
 # ----------------------------------------
 # POST /tasks
@@ -133,7 +137,7 @@ def test_create_task_accepts_full_valid_payload(create_task, parse_response):
     payload = {
         "title": "Full task",
         "description": "Full description",
-        "due_date": "2026-03-20",
+        "due_date": valid_due_date.isoformat(),
     }
 
     # Act

@@ -1,15 +1,17 @@
 # tests/unit/services/test_task_service.py
 
-import pytest
-from datetime import date, datetime
+from datetime import date
 from unittest.mock import Mock
 
-from app.domain.entities.task import Task
-from app.repositories.task_repository import TaskRepository
-from app.domain.enums.task_status import TaskStatus
-from app.schemas.task import TaskCreate, TaskPatch, TaskUpdate
-from app.services.task_service import TaskNotFoundError, TaskService
+import pytest
 
+from app.domain.entities.task import Task
+from app.domain.enums.task_status import TaskStatus
+from app.domain.errors.task import InvalidTaskDueDateError
+from app.infrastructure.repositories.task_repository import TaskRepository
+from app.application.services.task_service import TaskNotFoundError, TaskService
+from tests.factories.task import build_task
+from app.application.dtos.task_dto import CreateTaskInput, UpdateTaskInput
 
 @pytest.fixture
 def repository() -> Mock:
@@ -26,30 +28,9 @@ def task_service(repository: Mock) -> TaskService:
     """
     return TaskService(repository=repository)
 
+
 def save_task_side_effect(task: Task) -> Task:
     return task
-
-def build_task(
-    task_id: int = 1,
-    title: str = "Test task",
-    description: str | None = "testing",
-    status: TaskStatus = TaskStatus.PENDING,
-    due_date: date | None = None,
-    created_at: datetime | None = None,
-    updated_at: datetime | None = None
-) -> Task:
-    """
-    Build a Task object for service tests.
-    """
-    return Task(
-        id=task_id,
-        title=title,
-        description=description,
-        status=status,
-        due_date=due_date,
-        created_at=created_at or datetime(2026, 3, 14, 12, 0, 0),
-        updated_at=updated_at
-    )
 
 
 # ----------------------------------------
@@ -145,7 +126,7 @@ def test_create_task_builds_task_with_default_status_and_saves_it(task_service: 
     create_task should build a Task with default status and save it through the repository.
     """
     # Arrange
-    task_input = TaskCreate(title="My first task", description="testing", due_date=None)
+    task_input = CreateTaskInput(title="My first task", description="testing", due_date=None)
     repository.next_id.return_value = 1
 
     repository.save_task.side_effect = save_task_side_effect
@@ -158,6 +139,7 @@ def test_create_task_builds_task_with_default_status_and_saves_it(task_service: 
     assert result.title == "My first task"
     assert result.description == "testing"
     assert result.status == TaskStatus.PENDING
+    assert result.is_blocked is False
     assert result.due_date is None
     assert result.created_at is not None
     assert result.updated_at is None
@@ -171,6 +153,7 @@ def test_create_task_builds_task_with_default_status_and_saves_it(task_service: 
     assert saved_task.title == "My first task"
     assert saved_task.description == "testing"
     assert saved_task.status == TaskStatus.PENDING
+    assert saved_task.is_blocked is False
     assert saved_task.due_date is None
     assert saved_task.created_at is not None
     assert saved_task.updated_at is None
@@ -180,7 +163,7 @@ def test_create_task_accepts_due_date_when_provided(task_service: TaskService, r
     create_task should include due_date in the created Task when provided.
     """
     # Arrange
-    task_input = TaskCreate(title="Task with due date", description="testing", due_date=date(2026, 3, 20))
+    task_input = CreateTaskInput(title="Task with due date", description="testing", due_date=date(2026, 3, 20))
     repository.next_id.return_value = 1
 
     repository.save_task.side_effect = save_task_side_effect
@@ -193,6 +176,7 @@ def test_create_task_accepts_due_date_when_provided(task_service: TaskService, r
     assert result.title == "Task with due date"
     assert result.description == "testing"
     assert result.status == TaskStatus.PENDING
+    assert result.is_blocked is False
     assert result.due_date == date(2026, 3, 20)
     assert result.created_at is not None
     assert result.updated_at is None
@@ -206,7 +190,49 @@ def test_create_task_accepts_due_date_when_provided(task_service: TaskService, r
     assert saved_task.title == "Task with due date"
     assert saved_task.description == "testing"
     assert saved_task.status == TaskStatus.PENDING
+    assert saved_task.is_blocked is False
     assert saved_task.due_date == date(2026, 3, 20)
+    assert saved_task.created_at is not None
+    assert saved_task.updated_at is None
+
+def test_create_task_accepts_is_blocked_when_provided(task_service: TaskService, repository: Mock):
+    """
+    create_task should include is_blocked in the created Task when provided.
+    """
+    # Arrange
+    task_input = CreateTaskInput(
+        title="Blocked task",
+        description="testing",
+        due_date=None,
+        is_blocked=True,
+    )
+    repository.next_id.return_value = 1
+    repository.save_task.side_effect = save_task_side_effect
+
+    # Act
+    result = task_service.create_task(task_input)
+
+    # Assert
+    assert result.id == 1
+    assert result.title == "Blocked task"
+    assert result.description == "testing"
+    assert result.status == TaskStatus.PENDING
+    assert result.due_date is None
+    assert result.is_blocked is True
+    assert result.created_at is not None
+    assert result.updated_at is None
+
+    repository.next_id.assert_called_once_with()
+    repository.save_task.assert_called_once()
+
+    saved_task = repository.save_task.call_args.args[0]
+    assert isinstance(saved_task, Task)
+    assert saved_task.id == 1
+    assert saved_task.title == "Blocked task"
+    assert saved_task.description == "testing"
+    assert saved_task.status == TaskStatus.PENDING
+    assert saved_task.due_date is None
+    assert saved_task.is_blocked is True
     assert saved_task.created_at is not None
     assert saved_task.updated_at is None
 
@@ -223,7 +249,13 @@ def test_update_task_replaces_task_data_and_saves_it(task_service: TaskService, 
 
     repository.get_task.return_value = existing_task
 
-    task_update = TaskUpdate(title="Updated title", description="updated", status=TaskStatus.IN_PROGRESS, due_date=date(2026, 3, 20))
+    task_update = UpdateTaskInput(
+        title="Updated title",
+        description="updated",
+        status=TaskStatus.IN_PROGRESS,
+        due_date=date(2026, 3, 20),
+        is_blocked=True,
+    )
 
     repository.save_task.side_effect = save_task_side_effect
 
@@ -236,6 +268,7 @@ def test_update_task_replaces_task_data_and_saves_it(task_service: TaskService, 
     assert result.description == "updated"
     assert result.status == TaskStatus.IN_PROGRESS
     assert result.due_date == date(2026, 3, 20)
+    assert result.is_blocked is True
     assert result.created_at == existing_task.created_at
     assert result.updated_at is not None
 
@@ -248,7 +281,7 @@ def test_update_task_raises_when_repository_returns_none(task_service: TaskServi
     """
     # Arrange
     repository.get_task.return_value = None
-    task_update = TaskUpdate(title="Updated title", description="updated", status=TaskStatus.IN_PROGRESS, due_date=None)
+    task_update = UpdateTaskInput(title="Updated title", description="updated", status=TaskStatus.IN_PROGRESS, due_date=date(2026, 3, 20), is_blocked=False)
 
     # Act / Assert
     with pytest.raises(TaskNotFoundError, match="Task not found"):
@@ -257,17 +290,22 @@ def test_update_task_raises_when_repository_returns_none(task_service: TaskServi
     repository.get_task.assert_called_once_with(999)
     repository.save_task.assert_not_called()
 
-def test_update_task_allows_description_and_due_date_to_be_none(task_service: TaskService, repository: Mock):
+def test_update_task_saves_pending_state_with_nullable_fields(task_service: TaskService, repository: Mock):
     """
     update_task should allow description and due_date to be set to None.
     """
     # Arrange
     existing_task = build_task(task_id=1, title="Original title", description="original")
     repository.get_task.return_value = existing_task
+    repository.save_task.side_effect = save_task_side_effect
 
-    task_update = TaskUpdate(title="Updated title", description=None, status=TaskStatus.IN_PROGRESS, due_date=None)
-
-    repository.save_task.side_effect = lambda task: task
+    task_update = UpdateTaskInput(
+        title="Updated title",
+        description=None,
+        status=TaskStatus.PENDING,
+        due_date=None,
+        is_blocked=False
+    )
 
     # Act
     result = task_service.update_task(1, task_update)
@@ -276,8 +314,9 @@ def test_update_task_allows_description_and_due_date_to_be_none(task_service: Ta
     assert result.id == 1
     assert result.title == "Updated title"
     assert result.description is None
-    assert result.status == TaskStatus.IN_PROGRESS
+    assert result.status == TaskStatus.PENDING
     assert result.due_date is None
+    assert result.is_blocked is False
     assert result.updated_at is not None
 
     repository.get_task.assert_called_once_with(1)
@@ -297,11 +336,12 @@ def test_update_task_does_not_save_when_no_real_changes(task_service: TaskServic
     )
     repository.get_task.return_value = existing_task
 
-    task_update = TaskUpdate(
+    task_update = UpdateTaskInput(
         title="Original title",
         description="original",
         status=TaskStatus.IN_PROGRESS,
-        due_date=date(2026, 3, 20)
+        due_date=date(2026, 3, 20),
+        is_blocked=False
     )
 
     # Act
@@ -314,156 +354,46 @@ def test_update_task_does_not_save_when_no_real_changes(task_service: TaskServic
     repository.get_task.assert_called_once_with(1)
     repository.save_task.assert_not_called()
 
-# ----------------------------------------
-# patch_task
-# ----------------------------------------
-
-def test_patch_task_updates_only_title_when_title_is_provided(task_service: TaskService, repository: Mock):
+def test_update_task_updates_is_blocked_when_provided(task_service: TaskService, repository: Mock):
     """
-    patch_task should update only the title when title is explicitly provided.
+    update_task should replace is_blocked when provided in the PUT payload.
     """
     # Arrange
-    existing_task = build_task(task_id=1, title="Original title", description="original description", due_date=None)
-
+    existing_task = build_task(task_id=1, status=TaskStatus.PENDING, due_date=None)
     repository.get_task.return_value = existing_task
-
-    task_patch = TaskPatch(title="Patched title")
-
     repository.save_task.side_effect = save_task_side_effect
 
-    # Act
-    result = task_service.patch_task(1, task_patch)
-
-    # Assert
-    assert result.id == 1
-    assert result.title == "Patched title"
-    assert result.description == "original description"
-    assert result.status == TaskStatus.PENDING
-    assert result.due_date is None
-    assert result.updated_at is not None
-
-    repository.get_task.assert_called_once_with(1)
-    repository.save_task.assert_called_once_with(existing_task)
-
-def test_patch_task_updates_description_to_none_when_explicitly_provided(task_service: TaskService, repository: Mock):
-    """
-    patch_task should update description to None when it is explicitly provided.
-    """
-    # Arrange
-    existing_task = build_task(task_id=1, title="Original title", description="original description", due_date=None)
-
-    repository.get_task.return_value = existing_task
-
-    task_patch = TaskPatch(description=None)
-
-    repository.save_task.side_effect = save_task_side_effect
-
-    # Act
-    result = task_service.patch_task(1, task_patch)
-
-    # Assert
-    assert result.id == 1
-    assert result.title == "Original title"
-    assert result.description is None
-    assert result.status == TaskStatus.PENDING
-    assert result.due_date is None
-    assert result.updated_at is not None
-
-    repository.get_task.assert_called_once_with(1)
-    repository.save_task.assert_called_once_with(existing_task)
-
-def test_patch_task_updates_status_when_explicitly_provided(task_service: TaskService, repository: Mock):
-    """
-    patch_task should update status when it is explicitly provided.
-    """
-    # Arrange
-    existing_task = build_task(task_id=1, title="Original title", description="original description", due_date=None)
-
-    repository.get_task.return_value = existing_task
-
-    task_patch = TaskPatch(status=TaskStatus.COMPLETED)
-
-    repository.save_task.side_effect = save_task_side_effect
-
-    # Act
-    result = task_service.patch_task(1, task_patch)
-
-    # Assert
-    assert result.id == 1
-    assert result.title == "Original title"
-    assert result.description == "original description"
-    assert result.status == TaskStatus.COMPLETED
-    assert result.due_date is None
-    assert result.updated_at is not None
-
-    repository.get_task.assert_called_once_with(1)
-    repository.save_task.assert_called_once_with(existing_task)
-
-def test_patch_task_updates_due_date_when_explicitly_provided(task_service: TaskService, repository: Mock):
-    """
-    patch_task should update due_date when it is explicitly provided.
-    """
-    # Arrange
-    existing_task = build_task(task_id=1, title="Original title", description="original description", due_date=None)
-
-    repository.get_task.return_value = existing_task
-
-    task_patch = TaskPatch(due_date=date(2026, 3, 20))
-
-    repository.save_task.side_effect = save_task_side_effect
-
-    # Act
-    result = task_service.patch_task(1, task_patch)
-
-    # Assert
-    assert result.id == 1
-    assert result.title == "Original title"
-    assert result.description == "original description"
-    assert result.status == TaskStatus.PENDING
-    assert result.due_date == date(2026, 3, 20)
-    assert result.updated_at is not None
-
-    repository.get_task.assert_called_once_with(1)
-    repository.save_task.assert_called_once_with(existing_task)
-
-def test_patch_task_does_not_save_when_value_is_equal_to_current_one(task_service: TaskService, repository: Mock):
-    """
-    patch_task should not save the task when the provided field value is equal to the current one.
-    """
-    # Arrange
-    existing_task = build_task(
-        task_id=1,
-        title="Original title",
-        description="original description",
-        due_date=None
+    task_update = UpdateTaskInput(
+        title=existing_task.title,
+        description=existing_task.description,
+        status=TaskStatus.PENDING,
+        due_date=None,
+        is_blocked=True
     )
-    repository.get_task.return_value = existing_task
-
-    task_patch = TaskPatch(title="Original title")
 
     # Act
-    result = task_service.patch_task(1, task_patch)
+    result = task_service.update_task(1, task_update)
 
     # Assert
-    assert result is existing_task
-    assert result.title == "Original title"
-    assert result.updated_at is None
+    assert result.is_blocked is True
+    assert result.updated_at is not None
+    repository.get_task.assert_called_once_with(1)
+    repository.save_task.assert_called_once_with(existing_task)
+
+def test_update_task_propagates_domain_error_and_does_not_save_when_final_state_is_invalid(task_service: TaskService, repository: Mock) -> None:
+    existing_task = build_task(task_id=1, status=TaskStatus.PENDING, due_date=None)
+    repository.get_task.return_value = existing_task
+
+    task_update = UpdateTaskInput(
+        title=existing_task.title,
+        description=existing_task.description,
+        status=TaskStatus.IN_PROGRESS,
+        due_date=None,
+        is_blocked=False
+    )
+
+    with pytest.raises(InvalidTaskDueDateError, match="required for IN_PROGRESS tasks"):
+        task_service.update_task(1, task_update)
 
     repository.get_task.assert_called_once_with(1)
-    repository.save_task.assert_not_called()
-
-
-def test_patch_task_raises_when_repository_returns_none(task_service: TaskService, repository: Mock):
-    """
-    patch_task should raise TaskNotFoundError when the repository does not find the task.
-    """
-    # Arrange
-    repository.get_task.return_value = None
-    task_patch = TaskPatch(title="Patched title")
-
-    # Act / Assert
-    with pytest.raises(TaskNotFoundError, match="Task not found"):
-        task_service.patch_task(999, task_patch)
-
-    repository.get_task.assert_called_once_with(999)
     repository.save_task.assert_not_called()

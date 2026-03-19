@@ -4,9 +4,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.repositories.task_repository import InMemoryTaskRepository
-from app.services.task_service import TaskService, get_task_service
-from app.schemas.task import TaskResponse
+from app.infrastructure.repositories.task_repository import InMemoryTaskRepository
+from app.application.services.task_service import TaskService, get_task_service
+from app.api.schemas.task import TaskResponse
 
 
 # ----------------------------------------

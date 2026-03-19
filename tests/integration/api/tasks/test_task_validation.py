@@ -55,7 +55,7 @@ def test_create_task_fails_when_extra_field_provided(client):
         ("ab", 422),        # below minimum
         ("abc", 201),       # minimum valid
         ("a" * 120, 201),   # maximum valid
-        ("a" * 121, 422),   # above maximum
+        ("a" * 121, 422)   # above maximum
     ],
 )
 def test_create_task_validates_title_length_boundaries(client, title, expected_status):
@@ -74,7 +74,7 @@ def test_create_task_validates_title_length_boundaries(client, title, expected_s
         ("", 422),           # below minimum
         ("a", 201),          # minimum valid
         ("a" * 500, 201),    # maximum valid
-        ("a" * 501, 422),    # above maximum
+        ("a" * 501, 422)    # above maximum
     ],
 )
 def test_create_task_validates_description_length_boundaries(client, description, expected_status):
@@ -191,7 +191,7 @@ def test_update_task_rejects_null_title(client, create_task):
         "title": None,
         "description": "updated",
         "status": TaskStatus.IN_PROGRESS.value,
-        "due_date": None,
+        "due_date": None
     }
 
     # Act
@@ -213,7 +213,7 @@ def test_update_task_rejects_null_status(client, create_task):
         "title": "title",
         "description": "description",
         "status": None,
-        "due_date": None,
+        "due_date": None
     }
 
     # Act
@@ -234,7 +234,7 @@ def test_update_task_requires_description_field(client, create_task):
     payload = {
         "title": "Updated title",
         "status": TaskStatus.IN_PROGRESS.value,
-        "due_date": None,
+        "due_date": None
     }
 
     # Act
@@ -255,7 +255,7 @@ def test_update_task_requires_due_date_field(client, create_task):
     payload = {
         "title": "Updated title",
         "description": "updated",
-        "status": TaskStatus.IN_PROGRESS.value,
+        "status": TaskStatus.IN_PROGRESS.value
     }
 
     # Act
@@ -278,7 +278,7 @@ def test_update_task_fails_when_extra_field_is_provided(client, create_task):
         "description": "updated",
         "status": TaskStatus.IN_PROGRESS.value,
         "due_date": None,
-        "unexpected": "value",
+        "unexpected": "value"
     }
 
     # Act
@@ -299,7 +299,7 @@ def test_update_task_fails_when_invalid_title_type(client, create_task):
         "title": 123,
         "description": "updated",
         "status": TaskStatus.IN_PROGRESS.value,
-        "due_date": None,
+        "due_date": None
     }
 
     # Act
@@ -320,7 +320,7 @@ def test_update_task_fails_when_due_date_has_invalid_format(client, create_task)
         "title": "Updated title",
         "description": "updated",
         "status": TaskStatus.IN_PROGRESS.value,
-        "due_date": "not-a-date",
+        "due_date": "not-a-date"
     }
 
     # Act
@@ -341,7 +341,7 @@ def test_update_task_fails_when_status_has_invalid_value(client, create_task):
         "title": "Updated title",
         "description": "updated",
         "status": "invalid-status",
-        "due_date": None,
+        "due_date": None
     }
 
     # Act
@@ -362,7 +362,7 @@ def test_update_task_fails_when_description_has_invalid_type(client, create_task
         "title": "Updated title",
         "description": 2344,
         "status": TaskStatus.IN_PROGRESS.value,
-        "due_date": None,
+        "due_date": None
     }
 
     # Act
@@ -381,7 +381,7 @@ def test_update_task_requires_status_field(client, create_task):
     payload = {
         "title": "Updated title",
         "description": "updated",
-        "due_date": None,
+        "due_date": None
     }
 
     # Act
