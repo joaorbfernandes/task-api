@@ -1,9 +1,10 @@
 from datetime import UTC, datetime
 
+from app.application.dtos.task_dto import CreateTaskInput, UpdateTaskInput
 from app.domain.entities.task import Task
 from app.domain.enums.task_status import TaskStatus
 from app.infrastructure.repositories.task_repository import TaskRepository, get_task_repository
-from app.schemas.task import TaskCreate, TaskPatch, TaskUpdate
+# from app.schemas.task import TaskCreate, TaskPatch, TaskUpdate
 
 
 class TaskNotFoundError(Exception):
@@ -18,7 +19,8 @@ class TaskService:
         """Return the current UTC timestamp without microseconds."""
         return datetime.now(UTC).replace(microsecond=0)
 
-    def _build_task(self, task_id: int, task: TaskCreate) -> Task:
+    def _build_task(self, task_id: int, task: CreateTaskInput) -> Task:
+        """Build a new Task entity from the provided application input."""
         return Task(
             id=task_id,
             title=task.title,
@@ -34,7 +36,7 @@ class TaskService:
         """Return all tasks currently stored."""
         return self._repository.list_tasks()
 
-    def create_task(self, task: TaskCreate) -> Task:
+    def create_task(self, task: CreateTaskInput) -> Task:
         """Create a new task and store it through the repository."""
         task_id = self._repository.next_id()
         new_task = self._build_task(task_id, task)
@@ -49,8 +51,8 @@ class TaskService:
 
         return task
 
-    def update_task(self, task_id: int, task_update: TaskUpdate) -> Task:
-        """Fully replace task data using the validated PUT payload."""
+    def update_task(self, task_id: int, task_update: UpdateTaskInput) -> Task:
+        """Fully replace task data using the provided application input."""
         task = self.get_task(task_id)
 
         changed = task.update(
@@ -66,17 +68,24 @@ class TaskService:
             return self._repository.save_task(task)
 
         return task
+    
 
-    def patch_task(self, task_id: int, task_patch: TaskPatch) -> Task:
+    def delete_task(self, task_id: int) -> None:
+        """Delete a task by id or raise TaskNotFoundError if it does not exist."""
+        self.get_task(task_id)
+        self._repository.delete_task(task_id)
+
+    '''
+    def patch_task(self, task_id: int, task_patch: PatchTaskInput) -> Task:
         """Partially update task fields that were explicitly provided."""
         task = self.get_task(task_id)
 
-        title = task_patch.title if "title" in task_patch.model_fields_set else task.title
-        description = task_patch.description if "description" in task_patch.model_fields_set else task.description
-        status = task_patch.status if "status" in task_patch.model_fields_set else task.status
-        due_date = task_patch.due_date if "due_date" in task_patch.model_fields_set else task.due_date
-        is_blocked = task_patch.is_blocked if "is_blocked" in task_patch.model_fields_set else task.is_blocked
-
+        title = task_patch.title if task_patch.has_title else task.title
+        description = task_patch.description if task_patch.has_description else task.description
+        status = task_patch.status if task_patch.has_status else task.status
+        due_date = task_patch.due_date if task_patch.has_due_date else task.due_date
+        is_blocked = task_patch.is_blocked if task_patch.has_is_blocked else task.is_blocked
+        
         changed = task.update(
             title=title,
             description=description,
@@ -91,10 +100,7 @@ class TaskService:
 
         return task
 
-    def delete_task(self, task_id: int) -> None:
-        """Delete a task by id or raise TaskNotFoundError if it does not exist."""
-        self.get_task(task_id)
-        self._repository.delete_task(task_id)
+    '''
 
 
 def get_task_service() -> TaskService:
