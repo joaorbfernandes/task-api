@@ -106,7 +106,7 @@ def test_update_task_allows_null_due_date(client, create_task, parse_response):
     created_task = create_task(
         title="Original title",
         description="original",
-        due_date="2026-03-20",
+        due_date=valid_due_date.isoformat(),
     ).json()
     task_id = created_task["id"]
 
@@ -115,7 +115,7 @@ def test_update_task_allows_null_due_date(client, create_task, parse_response):
         "title": "Updated title",
         "description": "updated",
         "status": TaskStatus.PENDING.value,
-        "due_date": valid_due_date.isoformat(),
+        "due_date": None,
         "is_blocked": False
     }
 
@@ -133,7 +133,7 @@ def test_update_task_allows_null_due_date(client, create_task, parse_response):
     assert task.title == "Updated title"
     assert task.description == "updated"
     assert task.status == TaskStatus.PENDING
-    assert task.due_date == valid_due_date
+    assert task.due_date is None
     assert task.updated_at is not None
 
 # ----------------------------------------

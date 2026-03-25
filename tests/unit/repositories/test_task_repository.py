@@ -6,8 +6,9 @@ import pytest
 
 from app.domain.entities.task import Task
 
-from app.infrastructure.repositories.task_repository import InMemoryTaskRepository
+from app.infrastructure.repositories.in_memory_task_repository import InMemoryTaskRepository
 from app.domain.enums.task_status import TaskStatus
+from app.application.ports.task_repository import TaskCreateData
 
 
 @pytest.fixture
@@ -35,20 +36,61 @@ def build_task(task_id: int, title: str = "Test task") -> Task:
     )
 
 
-def test_next_id_returns_incremental_ids(repository: InMemoryTaskRepository):
+def test_create_task_assigns_incremental_ids(repository: InMemoryTaskRepository) -> None:
     """
-    next_id should return incremental ids.
+    create_task should assign incremental ids to newly created tasks.
     """
     # Arrange
+    first_input = TaskCreateData(
+        title="Task 1",
+        description="first",
+        status=TaskStatus.PENDING,
+        due_date=None,
+        created_at=datetime(2026, 3, 18, 12, 0, 0),
+        is_blocked=False,
+    )
+    second_input = TaskCreateData(
+        title="Task 2",
+        description="second",
+        status=TaskStatus.PENDING,
+        due_date=None,
+        created_at=datetime(2026, 3, 18, 12, 0, 1),
+        is_blocked=False,
+    )
 
     # Act
-    first_id = repository.next_id()
-    second_id = repository.next_id()
+    first_task = repository.create_task(first_input)
+    second_task = repository.create_task(second_input)
 
     # Assert
-    assert first_id == 1
-    assert second_id == 2
+    assert first_task.id == 1
+    assert first_task.title == "Task 1"
+    assert first_task.description == "first"
 
+    assert second_task.id == 2
+    assert second_task.title == "Task 2"
+    assert second_task.description == "second"
+
+def test_create_task_stores_created_task_in_repository(repository: InMemoryTaskRepository) -> None:
+    """
+    create_task should store the created task in the repository.
+    """
+    # Arrange
+    task_input = TaskCreateData(
+        title="Stored task",
+        description="testing",
+        status=TaskStatus.PENDING,
+        due_date=None,
+        created_at=datetime(2026, 3, 18, 12, 0, 0),
+        is_blocked=False,
+    )
+
+    # Act
+    created_task = repository.create_task(task_input)
+
+    # Assert
+    stored_task = repository.get_task(created_task.id)
+    assert stored_task == created_task
 
 def test_list_tasks_returns_empty_list_when_repository_is_empty(repository: InMemoryTaskRepository):
     """
