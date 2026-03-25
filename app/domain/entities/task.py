@@ -7,17 +7,10 @@ from app.domain.errors.task import InvalidTaskDueDateError, InvalidTaskStatusTra
 
 
 STATUS_TRANSITIONS = {
-    TaskStatus.PENDING: {TaskStatus.IN_PROGRESS, TaskStatus.CANCELLED},
-    TaskStatus.IN_PROGRESS: {TaskStatus.COMPLETED, TaskStatus.CANCELLED},
-    TaskStatus.COMPLETED: set(),
-    TaskStatus.CANCELLED: set()
-}
-
-UPDATE_STATUS_TRANSITIONS = {
     TaskStatus.PENDING: {TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.CANCELLED},
     TaskStatus.IN_PROGRESS: {TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED, TaskStatus.CANCELLED},
     TaskStatus.COMPLETED: set(),
-    TaskStatus.CANCELLED: set()
+    TaskStatus.CANCELLED: set(),
 }
 
 BLOCKED_STATUS_EXCEPTIONS = {
@@ -96,25 +89,24 @@ class Task:
         if status == TaskStatus.IN_PROGRESS and due_date is None:
             raise InvalidTaskDueDateError("Due date is required for IN_PROGRESS tasks")
 
-    def _validate_incremental_status_change(self, new_status: TaskStatus) -> None:
+    def _validate_target_status_change(self, new_status: TaskStatus) -> None:
+        if self._status == new_status:
+            return
+
         if self._status in (TaskStatus.COMPLETED, TaskStatus.CANCELLED):
-            raise InvalidTaskStatusTransitionError("Task cannot change status from its current terminal state")
+            raise InvalidTaskStatusTransitionError(
+                "Task cannot change status from its current terminal state"
+            )
 
         if self._is_blocked:
             allowed_targets = BLOCKED_STATUS_EXCEPTIONS.get(self._status, set())
             if new_status not in allowed_targets:
-                raise InvalidTaskStatusTransitionError("Blocked tasks cannot change status in the requested way")
+                raise InvalidTaskStatusTransitionError(
+                    "Blocked tasks cannot change status in the requested way"
+                )
             return
 
         allowed_targets = STATUS_TRANSITIONS.get(self._status, set())
-        if new_status not in allowed_targets:
-            raise InvalidTaskStatusTransitionError("Invalid task status transition")
-
-    def _validate_update_target_status(self, new_status: TaskStatus) -> None:
-        if self._status in (TaskStatus.COMPLETED, TaskStatus.CANCELLED):
-            raise InvalidTaskStatusTransitionError("Task cannot change status from its current terminal state")
-
-        allowed_targets = UPDATE_STATUS_TRANSITIONS.get(self._status, set())
         if new_status not in allowed_targets:
             raise InvalidTaskStatusTransitionError("Invalid task status transition")
 
@@ -147,6 +139,8 @@ class Task:
     def block(self) -> bool:
         if self._is_blocked:
             return False
+        
+        self._check_editable()
 
         if self._status not in (TaskStatus.PENDING, TaskStatus.IN_PROGRESS):
             raise InvalidTaskStatusTransitionError(
@@ -160,6 +154,8 @@ class Task:
         if not self._is_blocked:
             return False
 
+        self._check_editable()
+
         self._is_blocked = False
         return True
 
@@ -167,7 +163,9 @@ class Task:
         if self._status == new_status:
             return False
 
-        self._validate_incremental_status_change(new_status)
+        self._check_editable()
+
+        self._validate_target_status_change(new_status)
 
         target_is_blocked = self._is_blocked
         if self._is_blocked and new_status in BLOCKED_STATUS_EXCEPTIONS.get(self._status, set()):
@@ -180,19 +178,20 @@ class Task:
         return True
 
     def update(self, *, title: str, description: str | None, status: TaskStatus, due_date: date | None, is_blocked: bool) -> bool:
-        self._check_editable()
-        self._validate_update_target_status(status)
-        self._validate_state(status=status, due_date=due_date, is_blocked=is_blocked)
 
-        if (self._title == title and self._description == description and self._status == status and self._is_blocked == is_blocked and self._due_date == due_date):
-            return False
+        changed = False
 
-        self._title = title
-        self._description = description
-        self._status = status
-        self._is_blocked = is_blocked
-        self._due_date = due_date
-        return True
+        changed = self.rename(title) or changed
+        changed = self.change_description(description) or changed
+        changed = self.change_due_date(due_date) or changed
+        changed = self.change_status(status) or changed
+
+        if is_blocked:
+            changed = self.block() or changed
+        else:
+            changed = self.unblock() or changed
+
+        return changed
 
     def mark_updated(self, timestamp: datetime) -> None:
         self._updated_at = timestamp

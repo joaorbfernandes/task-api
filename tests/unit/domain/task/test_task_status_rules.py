@@ -6,7 +6,7 @@ import pytest
 from tests.factories.task import build_task
 
 from app.domain.enums.task_status import TaskStatus
-from app.domain.errors.task import InvalidTaskStatusTransitionError, InvalidTaskDueDateError
+from app.domain.errors.task import InvalidTaskStatusTransitionError, InvalidTaskDueDateError, TaskNotEditableError
 
 
 # ----------------------------------------
@@ -97,7 +97,7 @@ def test_change_status_raises_when_task_is_completed() -> None:
     task = build_task(status=TaskStatus.COMPLETED, due_date=date(2026, 3, 25))
 
     # Act / Assert
-    with pytest.raises(InvalidTaskStatusTransitionError, match="terminal state"):
+    with pytest.raises(TaskNotEditableError, match="Task is not editable in its current state"):
         task.change_status(TaskStatus.CANCELLED)
 
 
@@ -106,7 +106,7 @@ def test_change_status_raises_when_task_is_cancelled() -> None:
     task = build_task(status=TaskStatus.CANCELLED)
 
     # Act / Assert
-    with pytest.raises(InvalidTaskStatusTransitionError, match="terminal state"):
+    with pytest.raises(TaskNotEditableError, match="Task is not editable in its current state"):
         task.change_status(TaskStatus.PENDING)
 
 

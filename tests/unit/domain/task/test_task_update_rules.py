@@ -252,7 +252,7 @@ def test_update_raises_when_completed_target_state_is_blocked() -> None:
     task = build_task(status=TaskStatus.IN_PROGRESS, due_date=date(2026, 3, 25))
 
     # Act / Assert
-    with pytest.raises(InvalidTaskStatusTransitionError, match="cannot be blocked in the target state"):
+    with pytest.raises(TaskNotEditableError, match="Task is not editable in its current state"):
         task.update(
             title=task.title,
             description=task.description,
@@ -267,7 +267,7 @@ def test_update_raises_when_cancelled_target_state_is_blocked() -> None:
     task = build_task(status=TaskStatus.IN_PROGRESS, due_date=date(2026, 3, 25))
 
     # Act / Assert
-    with pytest.raises(InvalidTaskStatusTransitionError, match="cannot be blocked in the target state"):
+    with pytest.raises(TaskNotEditableError, match="Task is not editable in its current state"):
         task.update(
             title=task.title,
             description=task.description,

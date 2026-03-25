@@ -6,7 +6,7 @@ import pytest
 from tests.factories.task import build_task
 
 from app.domain.enums.task_status import TaskStatus
-from app.domain.errors.task import InvalidTaskStatusTransitionError
+from app.domain.errors.task import InvalidTaskStatusTransitionError, TaskNotEditableError
 
 
 # ----------------------------------------
@@ -54,7 +54,7 @@ def test_block_raises_when_task_is_completed() -> None:
     task = build_task(status=TaskStatus.COMPLETED, is_blocked=False)
 
     # Act / Assert
-    with pytest.raises(InvalidTaskStatusTransitionError, match="cannot be blocked"):
+    with pytest.raises(TaskNotEditableError, match="Task is not editable in its current state"):
         task.block()
 
 
@@ -63,7 +63,7 @@ def test_block_raises_when_task_is_cancelled() -> None:
     task = build_task(status=TaskStatus.CANCELLED, is_blocked=False)
 
     # Act / Assert
-    with pytest.raises(InvalidTaskStatusTransitionError, match="cannot be blocked"):
+    with pytest.raises(TaskNotEditableError, match="Task is not editable in its current state"):
         task.block()
 
 
