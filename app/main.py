@@ -2,8 +2,8 @@
 
 from fastapi import FastAPI
 
-from app.api.routers.task import router as tasks_router
-from app.api.routers.health import router as health_router
+from app.modules.tasks.api.task_router import router as tasks_router
+from app.api.health_router import router as health_router
 
 app = FastAPI()
 

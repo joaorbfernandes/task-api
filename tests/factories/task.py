@@ -2,8 +2,8 @@
 
 from datetime import date, datetime, timedelta
 
-from app.domain.entities.task import Task
-from app.domain.enums.task_status import TaskStatus
+from app.modules.tasks.domain.task import Task
+from app.modules.tasks.domain.task_status import TaskStatus
 
 
 def build_task(
