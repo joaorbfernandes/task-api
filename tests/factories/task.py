@@ -30,3 +30,6 @@ def build_task(
 
 def future_date(days: int = 1) -> date:
     return date.today() + timedelta(days=days)
+
+def past_date(days: int = 1) -> date:
+    return date.today() - timedelta(days=days)
