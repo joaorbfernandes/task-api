@@ -8,10 +8,10 @@ import pytest
 from app.modules.tasks.domain.task import Task
 from app.modules.tasks.domain.task_status import TaskStatus
 from app.modules.tasks.domain.task_errors import InvalidTaskDueDateError
-from app.modules.tasks.application.task_repository import TaskRepository, TaskCreateData
+from app.modules.tasks.application.task_repository import TaskRepository
 from app.modules.tasks.application.task_service import TaskNotFoundError, TaskService
-from tests.factories.task import build_task, future_date, future_date
-from app.modules.tasks.application.task_dtos import CreateTaskInput, UpdateTaskInput, PatchTaskInput
+from tests.factories.task import build_new_task,build_task, future_date, future_date
+from app.modules.tasks.application.task_dtos import TaskInput, PatchTaskInput
 
 valid_due_date = future_date()
 
@@ -44,7 +44,7 @@ def test_get_task_returns_task_when_repository_finds_it(task_service: TaskServic
     get_task should return the task when the repository finds it.
     """
     # Arrange
-    existing_task = build_task(task_id=1, title="Task 1")
+    existing_task = build_new_task( title="Task 1")
     repository.get_task.return_value = existing_task
 
     # Act
@@ -76,7 +76,7 @@ def test_delete_task_calls_repository_delete_when_task_exists(task_service: Task
     delete_task should call repository.delete_task when the task exists.
     """
     # Arrange
-    existing_task = build_task(task_id=1, title="Task to delete")
+    existing_task = build_new_task( title="Task to delete")
     repository.get_task.return_value = existing_task
 
     # Act
@@ -109,7 +109,7 @@ def test_list_tasks_returns_tasks_from_repository(task_service: TaskService, rep
     list_tasks should return the tasks provided by the repository.
     """
     # Arrange
-    stored_tasks = [build_task(task_id=1, title="Task 1"), build_task(task_id=2, title="Task 2")]
+    stored_tasks = [build_task( title="Task 1"), build_task(title="Task 2")]
     repository.list_tasks.return_value = stored_tasks
 
     # Act
@@ -128,17 +128,18 @@ def test_create_task_delegates_creation_to_repository_with_default_status(
     repository: Mock,
 ) -> None:
     """
-    create_task should build TaskCreateData and delegate creation to the repository.
+    create_task should build TaskInput and delegate creation to the repository.
     """
     # Arrange
-    task_input = CreateTaskInput(
+    task_input = TaskInput(
         title="My first task",
         description="testing",
         due_date=None,
         is_blocked=False,
+        status=TaskStatus.PENDING
     )
-    created_task = build_task(
-        task_id=1,
+    created_task = build_new_task(
+        
         title="My first task",
         description="testing",
         due_date=None,
@@ -154,7 +155,7 @@ def test_create_task_delegates_creation_to_repository_with_default_status(
     repository.create_task.assert_called_once()
 
     create_data = repository.create_task.call_args.args[0]
-    assert isinstance(create_data, TaskCreateData)
+    assert isinstance(create_data, Task)
     assert create_data.title == "My first task"
     assert create_data.description == "testing"
     assert create_data.status == TaskStatus.PENDING
@@ -171,14 +172,15 @@ def test_create_task_passes_due_date_to_repository(
     create_task should pass due_date to the repository when provided.
     """
     # Arrange
-    task_input = CreateTaskInput(
+    task_input = TaskInput(
         title="Task with due date",
         description="testing",
         due_date=valid_due_date,
         is_blocked=False,
+        status=TaskStatus.PENDING
     )
-    created_task = build_task(
-        task_id=1,
+    created_task = build_new_task(
+        
         title="Task with due date",
         description="testing",
         due_date=valid_due_date,
@@ -194,7 +196,7 @@ def test_create_task_passes_due_date_to_repository(
     repository.create_task.assert_called_once()
 
     create_data = repository.create_task.call_args.args[0]
-    assert isinstance(create_data, TaskCreateData)
+    assert isinstance(create_data, Task)
     assert create_data.title == "Task with due date"
     assert create_data.description == "testing"
     assert create_data.status == TaskStatus.PENDING
@@ -211,14 +213,15 @@ def test_create_task_passes_is_blocked_to_repository(
     create_task should pass is_blocked to the repository when provided.
     """
     # Arrange
-    task_input = CreateTaskInput(
+    task_input = TaskInput(
         title="Blocked task",
         description="testing",
         due_date=None,
         is_blocked=True,
+        status=TaskStatus.PENDING
     )
-    created_task = build_task(
-        task_id=1,
+    created_task = build_new_task(
+        
         title="Blocked task",
         description="testing",
         due_date=None,
@@ -234,7 +237,7 @@ def test_create_task_passes_is_blocked_to_repository(
     repository.create_task.assert_called_once()
 
     create_data = repository.create_task.call_args.args[0]
-    assert isinstance(create_data, TaskCreateData)
+    assert isinstance(create_data, Task)
     assert create_data.title == "Blocked task"
     assert create_data.description == "testing"
     assert create_data.status == TaskStatus.PENDING
@@ -251,11 +254,11 @@ def test_update_task_replaces_task_data_and_saves_it(task_service: TaskService, 
     update_task should fully replace task fields and save the updated task.
     """
     # Arrange
-    existing_task = build_task(task_id=1, title="Original title", description="original", due_date=None)
+    existing_task = build_task(title="Original title", description="original", due_date=None)
 
     repository.get_task.return_value = existing_task
 
-    task_update = UpdateTaskInput(
+    task_update = TaskInput(
         title="Updated title",
         description="updated",
         status=TaskStatus.IN_PROGRESS,
@@ -287,7 +290,7 @@ def test_update_task_raises_when_repository_returns_none(task_service: TaskServi
     """
     # Arrange
     repository.get_task.return_value = None
-    task_update = UpdateTaskInput(title="Updated title", description="updated", status=TaskStatus.IN_PROGRESS, due_date=date(2026, 3, 20), is_blocked=False)
+    task_update = TaskInput(title="Updated title", description="updated", status=TaskStatus.IN_PROGRESS, due_date=date(2026, 3, 20), is_blocked=False)
 
     # Act / Assert
     with pytest.raises(TaskNotFoundError, match="Task not found"):
@@ -301,11 +304,11 @@ def test_update_task_saves_pending_state_with_nullable_fields(task_service: Task
     update_task should allow description and due_date to be set to None.
     """
     # Arrange
-    existing_task = build_task(task_id=1, title="Original title", description="original")
+    existing_task = build_task(title="Original title", description="original")
     repository.get_task.return_value = existing_task
     repository.save_task.side_effect = save_task_side_effect
 
-    task_update = UpdateTaskInput(
+    task_update = TaskInput(
         title="Updated title",
         description=None,
         status=TaskStatus.PENDING,
@@ -333,8 +336,8 @@ def test_update_task_does_not_save_when_no_real_changes(task_service: TaskServic
     update_task should not save the task when the payload does not change any field.
     """
     # Arrange
-    existing_task = build_task(
-        task_id=1,
+    existing_task = build_new_task(
+        
         title="Original title",
         description="original",
         status=TaskStatus.IN_PROGRESS,
@@ -342,7 +345,7 @@ def test_update_task_does_not_save_when_no_real_changes(task_service: TaskServic
     )
     repository.get_task.return_value = existing_task
 
-    task_update = UpdateTaskInput(
+    task_update = TaskInput(
         title="Original title",
         description="original",
         status=TaskStatus.IN_PROGRESS,
@@ -365,11 +368,11 @@ def test_update_task_updates_is_blocked_when_provided(task_service: TaskService,
     update_task should replace is_blocked when provided in the PUT payload.
     """
     # Arrange
-    existing_task = build_task(task_id=1, status=TaskStatus.PENDING, due_date=None)
+    existing_task = build_new_task(status=TaskStatus.PENDING, due_date=None)
     repository.get_task.return_value = existing_task
     repository.save_task.side_effect = save_task_side_effect
 
-    task_update = UpdateTaskInput(
+    task_update = TaskInput(
         title=existing_task.title,
         description=existing_task.description,
         status=TaskStatus.PENDING,
@@ -387,10 +390,10 @@ def test_update_task_updates_is_blocked_when_provided(task_service: TaskService,
     repository.save_task.assert_called_once_with(existing_task)
 
 def test_update_task_propagates_domain_error_and_does_not_save_when_final_state_is_invalid(task_service: TaskService, repository: Mock) -> None:
-    existing_task = build_task(task_id=1, status=TaskStatus.PENDING, due_date=None)
+    existing_task = build_new_task( status=TaskStatus.PENDING, due_date=None)
     repository.get_task.return_value = existing_task
 
-    task_update = UpdateTaskInput(
+    task_update = TaskInput(
         title=existing_task.title,
         description=existing_task.description,
         status=TaskStatus.IN_PROGRESS,
@@ -398,7 +401,7 @@ def test_update_task_propagates_domain_error_and_does_not_save_when_final_state_
         is_blocked=False
     )
 
-    with pytest.raises(InvalidTaskDueDateError, match="required for IN_PROGRESS tasks"):
+    with pytest.raises(InvalidTaskDueDateError, match="Due date is required for IN PROGRESS tasks"):
         task_service.update_task(1, task_update)
 
     repository.get_task.assert_called_once_with(1)
@@ -409,8 +412,8 @@ def test_update_task_propagates_domain_error_and_does_not_save_when_final_state_
 # ----------------------------------------
 
 def test_patch_task_updates_only_provided_fields(task_service: TaskService, repository: Mock) -> None:
-    existing_task = build_task(
-        task_id=1,
+    existing_task = build_new_task(
+        
         title="Original title",
         description="original",
         status=TaskStatus.PENDING,
@@ -438,8 +441,8 @@ def test_patch_task_updates_only_provided_fields(task_service: TaskService, repo
     repository.save_task.assert_called_once_with(existing_task)
 
 def test_patch_task_allows_description_to_be_cleared(task_service: TaskService, repository: Mock) -> None:
-    existing_task = build_task(
-        task_id=1,
+    existing_task = build_new_task(
+        
         description="original",
         due_date=valid_due_date,
     )
@@ -460,8 +463,8 @@ def test_patch_task_allows_description_to_be_cleared(task_service: TaskService, 
     repository.save_task.assert_called_once_with(existing_task)
 
 def test_patch_task_does_not_save_when_patch_does_not_change_state(task_service: TaskService, repository: Mock) -> None:
-    existing_task = build_task(
-        task_id=1,
+    existing_task = build_new_task(
+        
         title="Original title",
         description="original",
         status=TaskStatus.PENDING,
@@ -501,8 +504,8 @@ def test_patch_task_propagates_domain_error_and_does_not_save_when_final_state_i
     task_service: TaskService,
     repository: Mock,
 ) -> None:
-    existing_task = build_task(
-        task_id=1,
+    existing_task = build_new_task(
+        
         status=TaskStatus.PENDING,
         due_date=None,
         is_blocked=False,
@@ -514,7 +517,7 @@ def test_patch_task_propagates_domain_error_and_does_not_save_when_final_state_i
         status_provided=True,
     )
 
-    with pytest.raises(InvalidTaskDueDateError, match="required for IN_PROGRESS tasks"):
+    with pytest.raises(InvalidTaskDueDateError, match="Due date is required for IN PROGRESS tasks"):
         task_service.patch_task(1, task_patch)
 
     repository.get_task.assert_called_once_with(1)

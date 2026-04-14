@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Self
 
 from app.modules.tasks.domain.task_errors import (
     InvalidTaskDueDateError,
@@ -33,15 +34,8 @@ class Task:
         updated_at: datetime | None = None,
         is_blocked: bool = False,
     ) -> None:
-        validated_title = self._validate_title(title)
-        self._validate_final_state(
-            status=status,
-            due_date=due_date,
-            is_blocked=is_blocked,
-        )
-
         self._id = id
-        self._title = validated_title
+        self._title = title
         self._description = description
         self._status = status
         self._due_date = due_date
@@ -80,6 +74,29 @@ class Task:
     @property
     def is_blocked(self) -> bool:
         return self._is_blocked
+    
+    @classmethod
+    def create(
+        cls,
+        *,
+        title: str,
+        description: str | None,
+        status: TaskStatus,
+        due_date: date | None,
+        is_blocked: bool,
+        created_at: datetime
+    ) -> Self:
+        validated_title = cls._validate_title(title)
+        cls._validate_final_state(status=status, due_date=due_date, is_blocked=is_blocked)
+        return cls(
+            id=None,
+            title=validated_title,
+            description=description,
+            status=status,
+            due_date=due_date,
+            is_blocked=is_blocked,
+            created_at=created_at
+        )
 
     def _ensure_editable(self) -> None:
         if self.status not in EDITABLE_STATUSES:
@@ -93,6 +110,12 @@ class Task:
 
         if not validated_title:
             raise InvalidTaskTitleError("Task title cannot be empty")
+
+        if len(validated_title) < 3:
+            raise InvalidTaskTitleError("Task title must be at least 3 characters long")
+
+        if len(validated_title) > 120:
+            raise InvalidTaskTitleError("Task title must be at most 120 characters long")
 
         return validated_title
 
@@ -112,9 +135,7 @@ class Task:
             return
 
         if status == TaskStatus.COMPLETED:
-            raise InvalidTaskStatusTransitionError(
-                "Task can't be blocked in the COMPLETED state"
-            )
+            raise InvalidTaskStatusTransitionError("Task can't be blocked in the COMPLETED state")
 
     def _validate_blocked_transition(
         self,
@@ -127,16 +148,12 @@ class Task:
 
         if self.status == TaskStatus.PENDING:
             if target_status == TaskStatus.IN_PROGRESS and target_is_blocked:
-                raise InvalidTaskStatusTransitionError(
-                    "Can't change task status from PENDING to IN PROGRESS because the task is BLOCKED"
-                )
+                raise InvalidTaskStatusTransitionError("Can't change task status from PENDING to IN PROGRESS because the task is BLOCKED")
             return
 
         if self.status == TaskStatus.IN_PROGRESS:
             if target_status == TaskStatus.COMPLETED and target_is_blocked:
-                raise InvalidTaskStatusTransitionError(
-                    "Can't change task status from IN PROGRESS to COMPLETED because the task is BLOCKED"
-                )
+                raise InvalidTaskStatusTransitionError("Can't change task status from IN PROGRESS to COMPLETED because the task is BLOCKED")
 
     @classmethod
     def _validate_final_state(

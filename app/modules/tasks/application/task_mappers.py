@@ -1,25 +1,14 @@
-# app/application/mappers/task_mapper.py
-
-from app.modules.tasks.application.task_dtos import CreateTaskInput, UpdateTaskInput, PatchTaskInput
-from app.modules.tasks.api.task_schemas import TaskCreate, TaskPatch, TaskUpdate
+from app.modules.tasks.application.task_dtos import PatchTaskInput, TaskInput as TaskInputDTO
+from app.modules.tasks.api.task_schemas import TaskPatch, TaskInput as TaskInputSchema
 
 
-def map_task_create_to_input(task_create: TaskCreate) -> CreateTaskInput:
-    return CreateTaskInput(
-        title=task_create.title,
-        description=task_create.description,
-        due_date=task_create.due_date,
-        is_blocked=task_create.is_blocked
-    )
-
-
-def map_task_update_to_input(task_update: TaskUpdate) -> UpdateTaskInput:
-    return UpdateTaskInput(
-        title=task_update.title,
-        description=task_update.description,
-        status=task_update.status,
-        due_date=task_update.due_date,
-        is_blocked=task_update.is_blocked
+def map_task_input(task_input: TaskInputSchema) -> TaskInputDTO:
+    return TaskInputDTO(
+        title=task_input.title,
+        description=task_input.description,
+        status=task_input.status,
+        due_date=task_input.due_date,
+        is_blocked=task_input.is_blocked
     )
 
 

@@ -10,7 +10,7 @@ from app.modules.tasks.domain.task_errors import (
     TaskNotEditableError,
 )
 from app.modules.tasks.domain.task_status import TaskStatus
-from tests.factories.task import build_task, future_date, past_date
+from tests.factories.task import build_new_task, future_date, past_date
 
 
 # -----------------------------
@@ -19,24 +19,12 @@ from tests.factories.task import build_task, future_date, past_date
 
 def test_create_pending_task_with_valid_defaults() -> None:
     # Arrange / Act
-    task = build_task()
+    task = build_new_task()
 
     # Assert
     assert task.status == TaskStatus.PENDING
     assert task.due_date is None
     assert task.is_blocked is False
-
-
-def test_create_task_keeps_provided_uuid() -> None:
-    # Arrange
-    task_id = uuid4()
-
-    # Act
-    task = build_task(task_id=task_id)
-
-    # Assert
-    assert task.id == task_id
-
 
 def test_create_task_rejects_past_due_date() -> None:
     # Arrange / Act / Assert
@@ -44,7 +32,7 @@ def test_create_task_rejects_past_due_date() -> None:
         InvalidTaskDueDateError,
         match="Due date can't be earlier than the current date",
     ):
-        build_task(due_date=past_date())
+        build_new_task(due_date=past_date())
 
 
 def test_create_in_progress_requires_due_date() -> None:
@@ -53,7 +41,7 @@ def test_create_in_progress_requires_due_date() -> None:
         InvalidTaskDueDateError,
         match="Due date is required for IN PROGRESS tasks",
     ):
-        build_task(status=TaskStatus.IN_PROGRESS, due_date=None)
+        build_new_task(status=TaskStatus.IN_PROGRESS, due_date=None)
 
 
 def test_create_completed_requires_due_date() -> None:
@@ -62,7 +50,7 @@ def test_create_completed_requires_due_date() -> None:
         InvalidTaskDueDateError,
         match="Due date is required for COMPLETED tasks",
     ):
-        build_task(status=TaskStatus.COMPLETED, due_date=None)
+        build_new_task(status=TaskStatus.COMPLETED, due_date=None)
 
 
 def test_create_completed_cannot_be_blocked() -> None:
@@ -71,7 +59,7 @@ def test_create_completed_cannot_be_blocked() -> None:
         InvalidTaskStatusTransitionError,
         match="Task can't be blocked in the COMPLETED state",
     ):
-        build_task(
+        build_new_task(
             status=TaskStatus.COMPLETED,
             due_date=future_date(),
             is_blocked=True,
@@ -80,7 +68,7 @@ def test_create_completed_cannot_be_blocked() -> None:
 
 def test_create_cancelled_can_remain_blocked() -> None:
     # Arrange / Act
-    task = build_task(
+    task = build_new_task(
         status=TaskStatus.CANCELLED,
         due_date=None,
         is_blocked=True,
@@ -97,7 +85,7 @@ def test_create_rejects_blank_title() -> None:
         InvalidTaskTitleError,
         match="Task title cannot be empty",
     ):
-        build_task(title="   ")
+        build_new_task(title="   ")
 
 
 # -----------------------------
@@ -107,7 +95,7 @@ def test_create_rejects_blank_title() -> None:
 def test_update_returns_false_when_final_state_is_identical() -> None:
     # Arrange
     due = future_date()
-    task = build_task(
+    task = build_new_task(
         title="Same",
         description="same",
         status=TaskStatus.PENDING,
@@ -130,7 +118,7 @@ def test_update_returns_false_when_final_state_is_identical() -> None:
 
 def test_update_trims_title_before_saving() -> None:
     # Arrange
-    task = build_task(title="Old")
+    task = build_new_task(title="Old")
 
     # Act
     changed = task.update(
@@ -148,7 +136,7 @@ def test_update_trims_title_before_saving() -> None:
 
 def test_update_allows_explicit_unblock_and_progress_in_same_operation() -> None:
     # Arrange
-    task = build_task(
+    task = build_new_task(
         status=TaskStatus.PENDING,
         due_date=future_date(),
         is_blocked=True,
@@ -171,7 +159,7 @@ def test_update_allows_explicit_unblock_and_progress_in_same_operation() -> None
 
 def test_update_rejects_blocked_pending_to_in_progress_when_target_remains_blocked() -> None:
     # Arrange
-    task = build_task(
+    task = build_new_task(
         status=TaskStatus.PENDING,
         due_date=future_date(),
         is_blocked=True,
@@ -193,7 +181,7 @@ def test_update_rejects_blocked_pending_to_in_progress_when_target_remains_block
 
 def test_update_rejects_in_progress_without_due_date() -> None:
     # Arrange
-    task = build_task(
+    task = build_new_task(
         status=TaskStatus.PENDING,
         due_date=None,
         is_blocked=False,
@@ -215,7 +203,7 @@ def test_update_rejects_in_progress_without_due_date() -> None:
 
 def test_update_rejects_pending_to_completed() -> None:
     # Arrange
-    task = build_task(
+    task = build_new_task(
         status=TaskStatus.PENDING,
         due_date=future_date(),
         is_blocked=False,
@@ -237,7 +225,7 @@ def test_update_rejects_pending_to_completed() -> None:
 
 def test_update_rejects_completed_with_blocked_true() -> None:
     # Arrange
-    task = build_task(
+    task = build_new_task(
         status=TaskStatus.IN_PROGRESS,
         due_date=future_date(),
         is_blocked=False,
@@ -259,7 +247,7 @@ def test_update_rejects_completed_with_blocked_true() -> None:
 
 def test_update_rejects_blocked_in_progress_to_completed_when_target_remains_blocked() -> None:
     # Arrange
-    task = build_task(
+    task = build_new_task(
         status=TaskStatus.IN_PROGRESS,
         due_date=future_date(),
         is_blocked=True,
@@ -281,7 +269,7 @@ def test_update_rejects_blocked_in_progress_to_completed_when_target_remains_blo
 
 def test_update_allows_explicit_unblock_and_complete_in_same_operation() -> None:
     # Arrange
-    task = build_task(
+    task = build_new_task(
         status=TaskStatus.IN_PROGRESS,
         due_date=future_date(),
         is_blocked=True,
@@ -306,7 +294,7 @@ def test_update_allows_explicit_unblock_and_complete_in_same_operation() -> None
 def test_update_rejects_terminal_task(status: TaskStatus) -> None:
     # Arrange
     due_date = future_date() if status == TaskStatus.COMPLETED else None
-    task = build_task(status=status, due_date=due_date)
+    task = build_new_task(status=status, due_date=due_date)
 
     # Act / Assert
     with pytest.raises(TaskNotEditableError, match="Task is not editable"):
@@ -321,7 +309,7 @@ def test_update_rejects_terminal_task(status: TaskStatus) -> None:
 
 def test_update_does_not_mutate_task_when_validation_fails() -> None:
     # Arrange
-    task = build_task(
+    task = build_new_task(
         title="Original",
         status=TaskStatus.IN_PROGRESS,
         due_date=future_date(),
@@ -353,7 +341,7 @@ def test_update_does_not_mutate_task_when_validation_fails() -> None:
 
 def test_mark_updated_sets_updated_at() -> None:
     # Arrange
-    task = build_task()
+    task = build_new_task()
     timestamp = datetime.now()
 
     # Act

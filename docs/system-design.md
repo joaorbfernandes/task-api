@@ -4,173 +4,139 @@
 
 Task-API is a Task Manager API built as a backend engineering project.
 
-The goal is to keep the product small and clear while evolving the internal architecture in a professional way.
+The goal is to keep the product small and clear while evolving the internal architecture.
 
-## Focus
-
-The project focuses on:
-
-- task CRUD operations
-- request validation
-- unit and integration testing
-- architecture refactoring
-- API, application, domain and infrastructure separation
-- layered backend structure with explicit responsibility boundaries
-
-## Architecture
-
-The current request flow is:
+## Project Structure
 
 ```text
-HTTP request
-↓
-API schemas
-↓
-application mappers
-↓
-application DTOs
-↓
-application services
-↓
-domain entities
-↓
-infrastructure repositories
-↓
-in-memory storage
+app/
+├── main.py
+├── api/
+│   └── health_router.py
+└── modules/
+    └── tasks/
+        ├── api/
+        ├── application/
+        ├── domain/
+        └── infrastructure/
 ```
 
-Responsibilities are separated as follows:
-- routers handle HTTP concerns and endpoint orchestration
-- API schemas define request and response contracts
-- mappers translate API input into application input models
-- DTOs represent application-level input data
-- services coordinate application behaviour and use cases
-- domain entities enforce business rules and state consistency
-- infrastructure repositories handle persistence
+## General Flow
+
+`Router → Schema → Service → Domain → Repository → Persistence`
+
+## Layer Responsibilities
+
+- Router handles HTTP concerns
+- Schema validates request and response data
+- Service coordinates the use case
+- Domain enforces business rules and state consistency
+- Repository abstracts persistence
+- Persistence stores application data
+
+## Endpoints
+
+### POST /tasks
+
+`Router → Schema → Mapper → DTO [TaskInput] → Service.create_task() → Task.create() → Repository → In-memory`
+
+### GET /tasks
+
+`Router → Service.list_tasks() → Repository → In-memory`
+
+### GET /tasks/{id}
+
+`Router → Service.get_task() → Repository → In-memory`
+
+### DELETE /tasks/{id}
+
+`Router → Service.delete_task() → Repository → In-memory`
+
+### PUT /tasks/{id}
+
+`Router → Schema → Mapper → DTO [TaskInput] → Service.update_task() → Service._apply_update() → Task.update() → Repository.save_task()`
+
+### PATCH /tasks/{id}
+
+`Router → Schema → Mapper → DTO [PatchTaskInput] → Service.patch_task() → merge current state with patch → Service._apply_update() → Task.update() → Repository.save_task()`
+
+### PUT/PATCH Shared Update Flow
+
+```text
+Task.update(...)
+├─ _ensure_editable()             → blocks updates for terminal tasks
+├─ _validate_title()              → trims and validates title
+├─ _validate_status_transition()  → validates status changes when needed
+├─ _validate_blocked_transition() → validates blocked transition rules when needed
+└─ _validate_final_state()        → validates final task state consistency
+   ├─ _validate_due_date()        → validates due date rules
+   └─ _validate_blocked_state()   → validates blocked state rules
+
+If changed:
+Service → Task.mark_updated() → Repository.save_task()
+```
 
 ## Core Domain
 
-The system is currently centred on `Task`.
+### Task
+id · title · description · status · due_date · created_at · updated_at · is_blocked
 
-The domain is responsible for task behaviour and business rules.
+#### Status
 
-This includes decisions such as:
+PENDING · IN_PROGRESS · COMPLETED · CANCELLED
 
-- task lifecycle
-- state changes
-- editability rules
-- domain-level consistency
+#### Editable status
 
-Other entities such as comments or users may be introduced later, but they are not part of the current core scope.
+PENDING · IN_PROGRESS
 
-### Task Rules
+#### Terminal status
 
-#### Initial state invariants
+COMPLETED · CANCELLED
 
-- a Task must be created in a valid state
-- due_date cannot be earlier than the current date
+#### Task Lifecycle
+
+```text
+   ┌────────────────────┐
+   ▼                    │
+PENDING ─────────▶ IN_PROGRESS ─────────▶ COMPLETED
+   │                    │
+   │                    └───────────────▶ CANCELLED
+   │                                           ▲
+   └───────────────────────────────────────────┘
+```
+
+Note:
+
+- blocked tasks follow extra transition restrictions during update
+
+#### Current Task Rules
+- title is trimmed and cannot be empty 
+- title must be at least 3 characters long
+- title must be at most 120 characters long
 - IN_PROGRESS requires due_date
-- COMPLETED cannot start blocked
-- CANCELLED cannot start blocked
+- COMPLETED requires due_date
+- due_date cannot be in the past
+- COMPLETED cannot remain blocked
+- blocked tasks have extra transition restrictions
+- updates are fully validated before changes are applied
+- tasks are saved only when the state really changes
 
-#### Main lifecycle status
+## Persistence
 
-| Status |
-|---|
-| `PENDING` |
-| `IN_PROGRESS` |
-| `COMPLETED` |
-| `CANCELLED` |
+Current:
 
-#### Additional condition
+- repository abstraction
+- in-memory persistence
 
-| Condition | Meaning |
-|---|---|
-| `is_blocked` | Indicates that the task is temporarily blocked |
+Next step:
 
-#### Declarative update behaviour
+- PostgreSQL persistence
 
-| Rule |
-|---|
-| `update()` validates the final target state of the task |
-| `update()` does not execute incremental transitions internally |
-| `update()` does not automatically clear `is_blocked` |
-| A final state such as `IN_PROGRESS + is_blocked=True` is valid if the full target state is valid |
+## Direction
 
-#### Status transitions
+The project is evolving in small steps:
 
-| From | To | Allowed | Notes |
-|---|---|---|---|
-| `PENDING` | `IN_PROGRESS` | Yes |
-| `PENDING` | `CANCELLED` | Yes |
-| `PENDING` | `COMPLETED` | No |
-| `IN_PROGRESS` | `COMPLETED` | Yes |
-| `IN_PROGRESS` | `CANCELLED` | Yes |
-| `IN_PROGRESS` | `PENDING` | No |
-| `COMPLETED` | any | No |
-| `CANCELLED` | any | No |
-
-#### Block rules
-
-| Rule | Allowed |
-|---|---|
-| Block task in `PENDING` | Yes |
-| Block task in `IN_PROGRESS` | Yes |
-| Block task in `COMPLETED` | No |
-| Block task in `CANCELLED` | No |
-| Change status while blocked | No, except explicit allowed transitions |
-
-##### Blocked operations
-
-| Operation | Allowed | Result |
-|---|---|---|
-| Set `is_blocked=True` in `PENDING` | Yes | Task becomes blocked |
-| Set `is_blocked=True` in `IN_PROGRESS` | Yes | Task becomes blocked |
-| Set `is_blocked=True` in `COMPLETED` | No | Invalid domain operation |
-| Set `is_blocked=True` in `CANCELLED` | No | Invalid domain operation |
-| Set `is_blocked=False` when blocked | Yes | Task becomes unblocked |
-| Set `is_blocked=False` when already unblocked | Yes | No real change |
-
-##### Blocked status transition behaviour
-
-| Current state | `is_blocked` | Target state | Allowed | Side effect |
-|---|---|---|---|---|
-| `PENDING` | `True` | `IN_PROGRESS` | Yes | Set `is_blocked=False` |
-| `PENDING` | `True` | `CANCELLED` | No |  |
-| `IN_PROGRESS` | `True` | `COMPLETED` | No |  |
-| `IN_PROGRESS` | `True` | `CANCELLED` | Yes | Set `is_blocked=False` |
-| `PENDING` | `True` | `COMPLETED` | No |  |
-| `IN_PROGRESS` | `True` | `PENDING` | No |  |
-
-#### Editability rules
-
-| Status | Editable |
-|---|---|
-| `PENDING` | Yes |
-| `IN_PROGRESS` | Yes |
-| `COMPLETED` | No |
-| `CANCELLED` | No |
-
-#### Due date rules
-
-| Rule |
-|---|
-| `due_date` cannot be earlier than the current date |
-| `due_date` is required for transition to or persistence in `IN_PROGRESS` |
-| `due_date` cannot be changed in `COMPLETED` |
-| `due_date` cannot be changed in `CANCELLED` |
-
-#### Persistence rule
-
-| Rule |
-|---|
-| Persist only when the final task state actually changes |
-
-## Roadmap
-
-- EPIC-01 Core Task API
-- EPIC-02 Architecture Refactor
-- EPIC-03 Persistence Layer
-- EPIC-04 Authentication and Ownership
-- EPIC-05 Comments and Basic Collaboration
-- EPIC-06 Production Readiness
+- keep domain rules explicit
+- keep the architecture simple
+- replace in-memory persistence with PostgreSQL
+- prepare the base for future features such as authentication and ownership
