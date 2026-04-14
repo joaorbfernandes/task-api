@@ -1,22 +1,8 @@
 # app/application/ports/task_repository.py
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from datetime import date, datetime
 
 from app.modules.tasks.domain.task import Task
-from app.modules.tasks.domain.task_status import TaskStatus
-
-
-@dataclass(frozen=True, slots=True)
-class TaskCreateData:
-    title: str
-    description: str | None
-    status: TaskStatus
-    due_date: date | None
-    created_at: datetime
-    is_blocked: bool = False
-
 
 class TaskRepository(ABC):
     @abstractmethod
@@ -28,7 +14,7 @@ class TaskRepository(ABC):
         """Return a task by id or None if it does not exist."""
 
     @abstractmethod
-    def create_task(self, task_input: TaskCreateData) -> Task:
+    def create_task(self, task: Task) -> Task:
         """Create and persist a new task, returning the persisted domain entity."""
 
     @abstractmethod

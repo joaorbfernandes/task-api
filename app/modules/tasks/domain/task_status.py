@@ -8,3 +8,7 @@ class TaskStatus(str, Enum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
+
+    @property
+    def display_name(self) -> str:
+        return self.value.replace("_", " ").upper()

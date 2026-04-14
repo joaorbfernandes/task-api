@@ -1,6 +1,8 @@
 class TaskDomainError(Exception):
     """Base error for task domain rule violations."""
 
+class InvalidTaskTitleError(TaskDomainError):
+    """Raised when a task title is invalid."""
 
 class InvalidTaskStatusTransitionError(TaskDomainError):
     """Raised when a task tries to move to an invalid status."""

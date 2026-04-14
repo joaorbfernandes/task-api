@@ -28,7 +28,7 @@ def test_create_task_fails_when_title_missing(client):
     """
 
     # Arrange
-    payload = {"description": "testing", "due_date": None}
+    payload = {"description": "testing", "due_date": None, "status": "pending", "is_blocked": "false"}
 
     # Act
     response = client.post("/tasks", json=payload)
@@ -61,7 +61,7 @@ def test_create_task_fails_when_extra_field_provided(client):
 def test_create_task_validates_title_length_boundaries(client, title, expected_status):
 
     # Arrange
-    payload = {"title": title, "description": "valid description", "due_date": None}
+    payload = {"title": title, "description": "valid description", "due_date": None, "status": "pending", "is_blocked": "false"}
 
     # Act
     response = client.post("/tasks", json=payload)
@@ -80,7 +80,7 @@ def test_create_task_validates_title_length_boundaries(client, title, expected_s
 def test_create_task_validates_description_length_boundaries(client, description, expected_status):
 
     # Arrange
-    payload = {"title": "valid title", "description": description, "due_date": None}
+    payload = {"title": "valid title", "description": description, "due_date": None, "status": "pending", "is_blocked": "false"}
 
     # Act
     response = client.post("/tasks", json=payload)
@@ -94,21 +94,7 @@ def test_create_task_fails_when_title_is_null(client):
     """
 
     # Arrange
-    payload = {"title": None, "description": "testing", "due_date": None}
-
-    # Act
-    response = client.post("/tasks", json=payload)
-
-    # Assert
-    assert response.status_code == 422
-
-def test_create_task_fails_when_status_is_provided(client):
-    """
-    POST /tasks should return 422 when status is provided by the client.
-    """
-
-    # Arrange
-    payload = {"title": "Valid title", "description": "testing", "due_date": None, "status": TaskStatus.COMPLETED.value}
+    payload = {"title": None, "description": "testing", "due_date": None, "status": "pending", "is_blocked": "false"}
 
     # Act
     response = client.post("/tasks", json=payload)
@@ -122,7 +108,7 @@ def test_create_task_fails_when_title_has_invalid_type(client):
     """
 
     # Arrange
-    payload = {"title": 234, "description": "description", "due_date": None}
+    payload = {"title": 234, "description": "description", "due_date": None, "status": "pending", "is_blocked": "false"}
 
     # Act
     response = client.post("/tasks", json=payload)
@@ -136,7 +122,7 @@ def test_create_task_fails_when_description_has_invalid_type(client):
     """
 
     # Arrange
-    payload = {"title": "Valid title", "description": 123, "due_date": None}
+    payload = {"title": "Valid title", "description": 123, "due_date": None, "status": "pending", "is_blocked": "false"}
 
     # Act
     response = client.post("/tasks", json=payload)
@@ -150,7 +136,7 @@ def test_create_task_fails_when_due_date_has_invalid_format(client):
     """
 
     # Arrange
-    payload = {"title": "Valid title", "description": "testing", "due_date": "not-a-date"}
+    payload = {"title": "Valid title", "description": "testing", "due_date": "not-a-date", "status": "pending", "is_blocked": "false"}
 
     # Act
     response = client.post("/tasks", json=payload)
@@ -170,7 +156,7 @@ def test_update_task_fails_when_title_missing(client, create_task):
     # Arrange
     task_id = create_task().json()["id"]
 
-    payload = {"description": "updated", "status": TaskStatus.COMPLETED.value, "due_date": None}
+    payload = {"description": "updated", "status": "pending", "is_blocked": "false", "due_date": None}
 
     # Act
     response = client.put(f"/tasks/{task_id}", json=payload)
@@ -191,7 +177,8 @@ def test_update_task_rejects_null_title(client, create_task):
         "title": None,
         "description": "updated",
         "status": TaskStatus.IN_PROGRESS.value,
-        "due_date": None
+        "due_date": None,
+        "is_blocked": "false"
     }
 
     # Act
@@ -213,7 +200,8 @@ def test_update_task_rejects_null_status(client, create_task):
         "title": "title",
         "description": "description",
         "status": None,
-        "due_date": None
+        "due_date": None,
+        "is_blocked": "false"
     }
 
     # Act
@@ -234,7 +222,9 @@ def test_update_task_requires_description_field(client, create_task):
     payload = {
         "title": "Updated title",
         "status": TaskStatus.IN_PROGRESS.value,
-        "due_date": None
+        "due_date": None, 
+        "status": "pending", 
+        "is_blocked": "false"
     }
 
     # Act
@@ -254,8 +244,9 @@ def test_update_task_requires_due_date_field(client, create_task):
 
     payload = {
         "title": "Updated title",
-        "description": "updated",
-        "status": TaskStatus.IN_PROGRESS.value
+        "description": "updated", 
+        "status": "pending", 
+        "is_blocked": "false"
     }
 
     # Act
@@ -299,7 +290,8 @@ def test_update_task_fails_when_invalid_title_type(client, create_task):
         "title": 123,
         "description": "updated",
         "status": TaskStatus.IN_PROGRESS.value,
-        "due_date": None
+        "due_date": None,
+        "is_blocked": "false"
     }
 
     # Act
@@ -320,7 +312,8 @@ def test_update_task_fails_when_due_date_has_invalid_format(client, create_task)
         "title": "Updated title",
         "description": "updated",
         "status": TaskStatus.IN_PROGRESS.value,
-        "due_date": "not-a-date"
+        "due_date": "not-a-date",
+        "is_blocked": "false"
     }
 
     # Act
@@ -341,7 +334,8 @@ def test_update_task_fails_when_status_has_invalid_value(client, create_task):
         "title": "Updated title",
         "description": "updated",
         "status": "invalid-status",
-        "due_date": None
+        "due_date": None,
+        "is_blocked": "false"
     }
 
     # Act
@@ -362,7 +356,8 @@ def test_update_task_fails_when_description_has_invalid_type(client, create_task
         "title": "Updated title",
         "description": 2344,
         "status": TaskStatus.IN_PROGRESS.value,
-        "due_date": None
+        "due_date": None,
+        "is_blocked": "false"
     }
 
     # Act
@@ -381,7 +376,8 @@ def test_update_task_requires_status_field(client, create_task):
     payload = {
         "title": "Updated title",
         "description": "updated",
-        "due_date": None
+        "due_date": None,
+        "is_blocked": "false"
     }
 
     # Act

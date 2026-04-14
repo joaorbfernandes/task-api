@@ -2,18 +2,14 @@
 
 ## Project Overview
 
-Task-API is a small project built with FastAPI.
+Task-API is a backend engineering project built with FastAPI to explore clean backend design through a small but structured Task Manager API.
 
-The goal is not only to build a task management API, but also to better understand backend architecture and responsibility boundaries.
-
-This project is being used to explore:
-
-- API design
-- validation
-- testing
-- separation of responsibilities
-- service, repository and domain boundaries
-- architecture evolution with clear decisions
+It focuses on:
+- layered architecture
+- domain-driven business rules
+- clear responsibility boundaries
+- unit and integration testing
+- incremental architecture evolution
 
 ## Tech Stack
 
@@ -45,7 +41,7 @@ uv sync --extra dev
 
 Start the development server:
 ```bash
-uv run uvicorn app.main:app --reload
+uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 API: `http://127.0.0.1:8000`  
@@ -63,23 +59,30 @@ The project follows a layered backend structure:
 
 ```text
 app/
+├── main.py
 ├── api/
-│   ├── routers/         # HTTP endpoints
-│   └── schemas/         # HTTP request and response schemas
-├── application/
-│   ├── dtos/            # application input models
-│   ├── mappers/         # schema-to-application mapping
-│   └── services/        # application orchestration
-├── domain/
-│   ├── entities/        # domain entities and behaviour
-│   ├── enums/           # domain enums
-│   └── errors/          # domain exceptions
-├── infrastructure/
-│   └── repositories/    # persistence implementation
-└── main.py              # application entrypoint
+│   └── health_router.py
+└── modules/
+    └── tasks/
+        ├── api/
+        │   ├── dependencies.py
+        │   ├── exception_handlers.py
+        │   ├── task_router.py
+        │   └── task_schemas.py
+        ├── application/
+        │   ├── task_dtos.py
+        │   ├── task_mappers.py
+        │   ├── task_repository.py
+        │   └── task_service.py
+        ├── domain/
+        │   ├── task.py
+        │   ├── task_errors.py
+        │   └── task_status.py
+        └── infrastructure/
+            └── in_memory_task_repository.py
 ```
 
-## API Endpoints
+ ## API Endpoints
 
 |  Method  |    Endpoint   |      Description      |
 |----------|---------------|-----------------------|
@@ -91,6 +94,25 @@ app/
 |   PUT    | `/tasks/{id}` | Update task (replace) |
 |   PATCH  | `/tasks/{id}` | Update task (partial) |
 |   DELETE | `/tasks/{id}` | Delete task           |
+
+## Main Features
+
+- create, read, update, patch and delete tasks
+- task lifecycle validation
+- blocked-state rules
+- due date validation
+- explicit update flow with change detection
+- repository abstraction with in-memory persistence
+
+## Example Domain Rules
+
+- title is trimmed and validated
+- `IN_PROGRESS` requires `due_date`
+- `COMPLETED` requires `due_date`
+- `COMPLETED` cannot remain blocked
+- blocked tasks follow extra transition restrictions during update
+- tasks are only saved when the state really changes
+
 
 ## Testing Strategy
 

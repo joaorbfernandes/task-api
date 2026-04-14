@@ -1,5 +1,3 @@
-# app/application/dtos/task_dto.py
-
 from dataclasses import dataclass
 from datetime import date
 
@@ -7,15 +5,7 @@ from app.modules.tasks.domain.task_status import TaskStatus
 
 
 @dataclass(frozen=True, slots=True)
-class CreateTaskInput:
-    title: str
-    description: str | None = None
-    due_date: date | None = None
-    is_blocked: bool = False
-
-
-@dataclass(frozen=True, slots=True)
-class UpdateTaskInput:
+class TaskInput:
     title: str
     description: str | None
     status: TaskStatus

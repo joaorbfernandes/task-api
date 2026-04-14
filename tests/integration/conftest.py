@@ -52,7 +52,13 @@ def create_task(client: TestClient):
 
     def _create_task(**overrides):
 
-        payload = {"title": "Test task", "description": "testing", "due_date": None}
+        payload = {
+            "title": "Test task", 
+            "description": "testing", 
+            "due_date": None, 
+            "status": "pending", 
+            "is_blocked": "false"
+            }
 
         payload.update(overrides)
 

@@ -1,5 +1,3 @@
-# api/schemas/task.py
-
 from datetime import date, datetime
 from typing import Annotated
 from app.modules.tasks.domain.task_status import TaskStatus
@@ -11,30 +9,8 @@ TitleStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=3,
 DescStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
 
 
-class TaskCreate(BaseModel):
-    """Schema used to create a new task."""
-    model_config = ConfigDict(extra="forbid")
-
-    title: TitleStr
-    description: DescStr | None = None
-    due_date: date | None = None
-    is_blocked: bool = False
-
-
-class TaskResponse(BaseModel):
-    """Schema returned by task endpoints."""
-    id: int
-    title: TitleStr
-    status: TaskStatus
-    description: DescStr | None = None
-    due_date: date | None = None
-    created_at: datetime
-    updated_at: datetime | None = None
-    is_blocked: bool
-
-
-class TaskUpdate(BaseModel):
-    """Schema used for full task replacement."""
+class TaskInput(BaseModel):
+    """Schema used for full task input."""
     model_config = ConfigDict(extra="forbid")
 
     title: TitleStr
@@ -69,3 +45,15 @@ class TaskPatch(BaseModel):
             raise ValueError("is_blocked cannot be null")
 
         return self
+    
+
+class TaskResponse(BaseModel):
+    """Schema returned by task endpoints."""
+    id: int
+    title: TitleStr
+    status: TaskStatus
+    description: DescStr | None = None
+    due_date: date | None = None
+    created_at: datetime
+    updated_at: datetime | None = None
+    is_blocked: bool

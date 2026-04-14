@@ -6,6 +6,24 @@ from app.modules.tasks.domain.task import Task
 from app.modules.tasks.domain.task_status import TaskStatus
 
 
+def build_new_task(
+    *,
+    title: str = "Test task",
+    description: str | None = "testing",
+    status: TaskStatus = TaskStatus.PENDING,
+    due_date: date | None = None,
+    created_at: datetime | None = None,
+    is_blocked: bool = False
+) -> Task:
+    return Task.create(
+        title=title,
+        description=description,
+        status=status,
+        due_date=due_date,
+        created_at=created_at or datetime(2026, 3, 18, 12, 0, 0),
+        is_blocked=is_blocked
+    )
+
 def build_task(
     *,
     task_id: int = 1,
@@ -15,7 +33,7 @@ def build_task(
     due_date: date | None = None,
     created_at: datetime | None = None,
     updated_at: datetime | None = None,
-    is_blocked: bool = False
+    is_blocked: bool = False,
 ) -> Task:
     return Task(
         id=task_id,
@@ -25,8 +43,11 @@ def build_task(
         due_date=due_date,
         created_at=created_at or datetime(2026, 3, 18, 12, 0, 0),
         updated_at=updated_at,
-        is_blocked=is_blocked
+        is_blocked=is_blocked,
     )
 
 def future_date(days: int = 1) -> date:
     return date.today() + timedelta(days=days)
+
+def past_date(days: int = 1) -> date:
+    return date.today() - timedelta(days=days)

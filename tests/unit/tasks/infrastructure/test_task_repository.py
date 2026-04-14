@@ -8,7 +8,7 @@ from app.modules.tasks.domain.task import Task
 
 from app.modules.tasks.infrastructure.in_memory_task_repository import InMemoryTaskRepository
 from app.modules.tasks.domain.task_status import TaskStatus
-from app.modules.tasks.application.task_repository import TaskCreateData
+from app.modules.tasks.application.task_dtos import TaskInput
 
 
 @pytest.fixture
@@ -19,7 +19,7 @@ def repository() -> InMemoryTaskRepository:
     return InMemoryTaskRepository()
 
 
-def build_task(task_id: int, title: str = "Test task") -> Task:
+def build_new_task(task_id: int, title: str = "Test task") -> Task:
     """
     Build a task object for repository tests.
     """
@@ -41,42 +41,42 @@ def test_create_task_assigns_incremental_ids(repository: InMemoryTaskRepository)
     create_task should assign incremental ids to newly created tasks.
     """
     # Arrange
-    first_input = TaskCreateData(
+    first_task = Task.create(
         title="Task 1",
         description="first",
         status=TaskStatus.PENDING,
         due_date=None,
-        created_at=datetime(2026, 3, 18, 12, 0, 0),
         is_blocked=False,
+        created_at=datetime(2026, 3, 18, 12, 0, 0),
     )
-    second_input = TaskCreateData(
+    second_task = Task.create(
         title="Task 2",
         description="second",
         status=TaskStatus.PENDING,
         due_date=None,
-        created_at=datetime(2026, 3, 18, 12, 0, 1),
         is_blocked=False,
+        created_at=datetime(2026, 3, 18, 12, 5, 0),
     )
 
     # Act
-    first_task = repository.create_task(first_input)
-    second_task = repository.create_task(second_input)
+    created_first = repository.create_task(first_task)
+    created_second = repository.create_task(second_task)
 
     # Assert
-    assert first_task.id == 1
-    assert first_task.title == "Task 1"
-    assert first_task.description == "first"
+    assert created_first.id == 1
+    assert created_first.title == "Task 1"
+    assert created_first.description == "first"
 
-    assert second_task.id == 2
-    assert second_task.title == "Task 2"
-    assert second_task.description == "second"
+    assert created_second.id == 2
+    assert created_second.title == "Task 2"
+    assert created_second.description == "second"
 
 def test_create_task_stores_created_task_in_repository(repository: InMemoryTaskRepository) -> None:
     """
     create_task should store the created task in the repository.
     """
     # Arrange
-    task_input = TaskCreateData(
+    new_task = Task.create(
         title="Stored task",
         description="testing",
         status=TaskStatus.PENDING,
@@ -85,12 +85,16 @@ def test_create_task_stores_created_task_in_repository(repository: InMemoryTaskR
         is_blocked=False,
     )
 
+
     # Act
-    created_task = repository.create_task(task_input)
+    created_task = repository.create_task(new_task)
 
     # Assert
     stored_task = repository.get_task(created_task.id)
-    assert stored_task == created_task
+    assert stored_task is not None
+    assert stored_task.id == created_task.id
+    assert stored_task.title == "Stored task"
+    assert stored_task.description == "testing"
 
 def test_list_tasks_returns_empty_list_when_repository_is_empty(repository: InMemoryTaskRepository):
     """
@@ -110,7 +114,7 @@ def test_save_task_stores_task(repository: InMemoryTaskRepository):
     save_task should store a task and return it.
     """
     # Arrange
-    task = build_task(task_id=1, title="Task 1")
+    task = build_new_task(task_id=1, title="Task 1")
 
     # Act
     saved_task = repository.save_task(task)
@@ -139,8 +143,8 @@ def test_list_tasks_returns_saved_tasks(repository: InMemoryTaskRepository):
     list_tasks should return all saved tasks.
     """
     # Arrange
-    task_1 = build_task(task_id=1, title="Task 1")
-    task_2 = build_task(task_id=2, title="Task 2")
+    task_1 = build_new_task(task_id=1, title="Task 1")
+    task_2 = build_new_task(task_id=2, title="Task 2")
 
     repository.save_task(task_1)
     repository.save_task(task_2)
@@ -159,7 +163,7 @@ def test_delete_task_removes_existing_task(repository: InMemoryTaskRepository):
     delete_task should remove a stored task.
     """
     # Arrange
-    task = build_task(task_id=1)
+    task = build_new_task(task_id=1)
     repository.save_task(task)
 
     # Act
@@ -173,8 +177,8 @@ def test_save_task_replaces_existing_task_with_same_id(repository: InMemoryTaskR
     save_task should replace an existing task with the same id.
     """
     # Arrange
-    original_task = build_task(task_id=1, title="Original")
-    updated_task = build_task(task_id=1, title="Updated")
+    original_task = build_new_task(task_id=1, title="Original")
+    updated_task = build_new_task(task_id=1, title="Updated")
 
     repository.save_task(original_task)
 
