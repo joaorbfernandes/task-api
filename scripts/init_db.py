@@ -13,4 +13,17 @@ def bootstrap_database() -> None:
         future=True,
         pool_pre_ping=True,
     )
-    Base.metadata.create_all(bind=engine)
+
+    try:
+        Base.metadata.create_all(bind=engine)
+    finally:
+        engine.dispose()
+
+
+def main() -> None:
+    """Run the manual database bootstrap."""
+    bootstrap_database()
+
+
+if __name__ == "__main__":
+    main()
