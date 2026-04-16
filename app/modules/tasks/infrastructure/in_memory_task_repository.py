@@ -1,6 +1,6 @@
 # app/infrastructure/repositories/in_memory_task_repository.py
 
-from app.modules.tasks.application.task_repository import Task, TaskRepository
+from app.modules.tasks.application.task_repository import TaskRepository
 from app.modules.tasks.domain.task import Task
 
 
@@ -25,6 +25,8 @@ class InMemoryTaskRepository(TaskRepository):
 
     def save_task(self, task: Task) -> Task:
         """Store or replace a task in memory and return it."""
+        if task.id is None:
+            raise ValueError("Cannot save a task without an id")
         self._tasks[task.id] = task
         return task
 

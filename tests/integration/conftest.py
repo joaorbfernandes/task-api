@@ -9,11 +9,16 @@ from app.modules.tasks.application.task_service import TaskService
 from app.modules.tasks.api.task_schemas import TaskResponse
 from app.modules.tasks.api.dependencies import get_task_service
 
+class FakeUnitOfWork:
+    def commit(self) -> None:
+        pass
+
+    def rollback(self) -> None:
+        pass
 
 # ----------------------------------------
 # Test client
 # ----------------------------------------
-
 @pytest.fixture
 def client():
     """
@@ -22,21 +27,19 @@ def client():
     This keeps API integration tests isolated and aligned with the current
     router -> service -> repository architecture.
     """
-    # Arrange
     test_repository = InMemoryTaskRepository()
-    test_service = TaskService(repository=test_repository)
+    test_uow = FakeUnitOfWork()
+    test_service = TaskService(repository=test_repository, uow=test_uow)
 
     def override_get_task_service() -> TaskService:
         return test_service
 
     app.dependency_overrides[get_task_service] = override_get_task_service
 
-    # Act
     try:
         with TestClient(app) as client:
             yield client
     finally:
-        # Cleanup
         app.dependency_overrides.clear()
 
 
@@ -44,24 +47,22 @@ def client():
 # Task factory
 # ----------------------------------------
 
+
 @pytest.fixture
 def create_task(client: TestClient):
     """
     Provide a helper to create tasks through the HTTP API.
     """
-
     def _create_task(**overrides):
-
         payload = {
-            "title": "Test task", 
-            "description": "testing", 
-            "due_date": None, 
-            "status": "pending", 
-            "is_blocked": "false"
-            }
+            "title": "Test task",
+            "description": "testing",
+            "due_date": None,
+            "status": "pending",
+            "is_blocked": False,
+        }
 
         payload.update(overrides)
-
         return client.post("/tasks", json=payload)
 
     return _create_task
