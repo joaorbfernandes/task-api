@@ -1,34 +1,32 @@
-# tests/unit/services/test_task_service.py
-
 from datetime import date, datetime
 from unittest.mock import Mock
 
 import pytest
 
+from app.application.unit_of_work import UnitOfWork
 from app.modules.tasks.domain.task import Task
 from app.modules.tasks.domain.task_status import TaskStatus
 from app.modules.tasks.domain.task_errors import InvalidTaskDueDateError
 from app.modules.tasks.application.task_repository import TaskRepository
 from app.modules.tasks.application.task_service import TaskNotFoundError, TaskService
-from tests.factories.task import build_new_task,build_task, future_date, future_date
+from tests.factories.task import build_new_task, build_task, future_date
 from app.modules.tasks.application.task_dtos import TaskInput, PatchTaskInput
 
 valid_due_date = future_date()
 
 @pytest.fixture
 def repository() -> Mock:
-    """
-    Return a mock TaskRepository for each test.
-    """
     return Mock(spec=TaskRepository)
 
 
 @pytest.fixture
-def task_service(repository: Mock) -> TaskService:
-    """
-    Return a TaskService instance with a mocked repository.
-    """
-    return TaskService(repository=repository)
+def uow() -> Mock:
+    return Mock(spec=UnitOfWork)
+
+
+@pytest.fixture
+def task_service(repository: Mock, uow: Mock) -> TaskService:
+    return TaskService(repository=repository, uow=uow)
 
 
 def save_task_side_effect(task: Task) -> Task:
@@ -68,39 +66,6 @@ def test_get_task_raises_when_repository_returns_none(task_service: TaskService,
     repository.get_task.assert_called_once_with(999)
 
 # ----------------------------------------
-# delete_task
-# ----------------------------------------
-
-def test_delete_task_calls_repository_delete_when_task_exists(task_service: TaskService, repository: Mock):
-    """
-    delete_task should call repository.delete_task when the task exists.
-    """
-    # Arrange
-    existing_task = build_new_task( title="Task to delete")
-    repository.get_task.return_value = existing_task
-
-    # Act
-    task_service.delete_task(1)
-
-    # Assert
-    repository.get_task.assert_called_once_with(1)
-    repository.delete_task.assert_called_once_with(1)
-
-def test_delete_task_raises_when_repository_returns_none(task_service: TaskService, repository: Mock):
-    """
-    delete_task should raise TaskNotFoundError when the repository does not find the task.
-    """
-    # Arrange
-    repository.get_task.return_value = None
-
-    # Act / Assert
-    with pytest.raises(TaskNotFoundError, match="Task not found"):
-        task_service.delete_task(999)
-
-    repository.get_task.assert_called_once_with(999)
-    repository.delete_task.assert_not_called()
-
-# ----------------------------------------
 # list_tasks
 # ----------------------------------------
 
@@ -123,12 +88,14 @@ def test_list_tasks_returns_tasks_from_repository(task_service: TaskService, rep
 # create_task
 # ----------------------------------------
 
-def test_create_task_delegates_creation_to_repository_with_default_status(
+def test_create_task_delegates_creation_to_repository_with_default_status_and_commits(
     task_service: TaskService,
     repository: Mock,
+    uow: Mock,
 ) -> None:
     """
-    create_task should build TaskInput and delegate creation to the repository.
+    create_task should build a domain Task, delegate creation to the repository,
+    and commit the transaction on success.
     """
     # Arrange
     task_input = TaskInput(
@@ -136,10 +103,9 @@ def test_create_task_delegates_creation_to_repository_with_default_status(
         description="testing",
         due_date=None,
         is_blocked=False,
-        status=TaskStatus.PENDING
+        status=TaskStatus.PENDING,
     )
     created_task = build_new_task(
-        
         title="My first task",
         description="testing",
         due_date=None,
@@ -153,6 +119,8 @@ def test_create_task_delegates_creation_to_repository_with_default_status(
     # Assert
     assert result == created_task
     repository.create_task.assert_called_once()
+    uow.commit.assert_called_once()
+    uow.rollback.assert_not_called()
 
     create_data = repository.create_task.call_args.args[0]
     assert isinstance(create_data, Task)
@@ -164,12 +132,13 @@ def test_create_task_delegates_creation_to_repository_with_default_status(
     assert isinstance(create_data.created_at, datetime)
 
 
-def test_create_task_passes_due_date_to_repository(
+def test_create_task_passes_due_date_to_repository_and_commits(
     task_service: TaskService,
     repository: Mock,
+    uow: Mock,
 ) -> None:
     """
-    create_task should pass due_date to the repository when provided.
+    create_task should pass due_date to the repository and commit on success.
     """
     # Arrange
     task_input = TaskInput(
@@ -177,10 +146,9 @@ def test_create_task_passes_due_date_to_repository(
         description="testing",
         due_date=valid_due_date,
         is_blocked=False,
-        status=TaskStatus.PENDING
+        status=TaskStatus.PENDING,
     )
     created_task = build_new_task(
-        
         title="Task with due date",
         description="testing",
         due_date=valid_due_date,
@@ -194,6 +162,8 @@ def test_create_task_passes_due_date_to_repository(
     # Assert
     assert result == created_task
     repository.create_task.assert_called_once()
+    uow.commit.assert_called_once()
+    uow.rollback.assert_not_called()
 
     create_data = repository.create_task.call_args.args[0]
     assert isinstance(create_data, Task)
@@ -205,12 +175,13 @@ def test_create_task_passes_due_date_to_repository(
     assert isinstance(create_data.created_at, datetime)
 
 
-def test_create_task_passes_is_blocked_to_repository(
+def test_create_task_passes_is_blocked_to_repository_and_commits(
     task_service: TaskService,
     repository: Mock,
+    uow: Mock,
 ) -> None:
     """
-    create_task should pass is_blocked to the repository when provided.
+    create_task should pass is_blocked to the repository and commit on success.
     """
     # Arrange
     task_input = TaskInput(
@@ -218,10 +189,9 @@ def test_create_task_passes_is_blocked_to_repository(
         description="testing",
         due_date=None,
         is_blocked=True,
-        status=TaskStatus.PENDING
+        status=TaskStatus.PENDING,
     )
     created_task = build_new_task(
-        
         title="Blocked task",
         description="testing",
         due_date=None,
@@ -235,6 +205,8 @@ def test_create_task_passes_is_blocked_to_repository(
     # Assert
     assert result == created_task
     repository.create_task.assert_called_once()
+    uow.commit.assert_called_once()
+    uow.rollback.assert_not_called()
 
     create_data = repository.create_task.call_args.args[0]
     assert isinstance(create_data, Task)
@@ -245,17 +217,48 @@ def test_create_task_passes_is_blocked_to_repository(
     assert create_data.is_blocked is True
     assert isinstance(create_data.created_at, datetime)
 
+
+def test_create_task_rolls_back_when_repository_create_fails(
+    task_service: TaskService,
+    repository: Mock,
+    uow: Mock,
+) -> None:
+    """
+    create_task should roll back and re-raise when repository.create_task fails.
+    """
+    # Arrange
+    task_input = TaskInput(
+        title="My first task",
+        description="testing",
+        due_date=None,
+        is_blocked=False,
+        status=TaskStatus.PENDING,
+    )
+    repository.create_task.side_effect = RuntimeError("DB error")
+
+    # Act / Assert
+    with pytest.raises(RuntimeError, match="DB error"):
+        task_service.create_task(task_input)
+
+    repository.create_task.assert_called_once()
+    uow.commit.assert_not_called()
+    uow.rollback.assert_called_once()
+
 # ----------------------------------------
 # update_task
 # ----------------------------------------
 
-def test_update_task_replaces_task_data_and_saves_it(task_service: TaskService, repository: Mock):
+def test_update_task_replaces_task_data_saves_it_and_commits(
+    task_service: TaskService,
+    repository: Mock,
+    uow: Mock,
+) -> None:
     """
-    update_task should fully replace task fields and save the updated task.
+    update_task should fully replace task fields, save the updated task,
+    and commit the transaction when a real change happens.
     """
     # Arrange
     existing_task = build_task(title="Original title", description="original", due_date=None)
-
     repository.get_task.return_value = existing_task
 
     task_update = TaskInput(
@@ -263,7 +266,7 @@ def test_update_task_replaces_task_data_and_saves_it(task_service: TaskService, 
         description="updated",
         status=TaskStatus.IN_PROGRESS,
         due_date=valid_due_date,
-        is_blocked=True
+        is_blocked=True,
     )
 
     repository.save_task.side_effect = save_task_side_effect
@@ -283,14 +286,27 @@ def test_update_task_replaces_task_data_and_saves_it(task_service: TaskService, 
 
     repository.get_task.assert_called_once_with(1)
     repository.save_task.assert_called_once_with(existing_task)
+    uow.commit.assert_called_once()
+    uow.rollback.assert_not_called()
 
-def test_update_task_raises_when_repository_returns_none(task_service: TaskService, repository: Mock):
+
+def test_update_task_raises_and_rolls_back_when_repository_returns_none(
+    task_service: TaskService,
+    repository: Mock,
+    uow: Mock,
+) -> None:
     """
-    update_task should raise TaskNotFoundError when the repository does not find the task.
+    update_task should raise TaskNotFoundError and roll back when the repository does not find the task.
     """
     # Arrange
     repository.get_task.return_value = None
-    task_update = TaskInput(title="Updated title", description="updated", status=TaskStatus.IN_PROGRESS, due_date=date(2026, 3, 20), is_blocked=False)
+    task_update = TaskInput(
+        title="Updated title",
+        description="updated",
+        status=TaskStatus.IN_PROGRESS,
+        due_date=date(2026, 3, 20),
+        is_blocked=False,
+    )
 
     # Act / Assert
     with pytest.raises(TaskNotFoundError, match="Task not found"):
@@ -298,10 +314,18 @@ def test_update_task_raises_when_repository_returns_none(task_service: TaskServi
 
     repository.get_task.assert_called_once_with(999)
     repository.save_task.assert_not_called()
+    uow.commit.assert_not_called()
+    uow.rollback.assert_called_once()
 
-def test_update_task_saves_pending_state_with_nullable_fields(task_service: TaskService, repository: Mock):
+
+def test_update_task_saves_pending_state_with_nullable_fields_and_commits(
+    task_service: TaskService,
+    repository: Mock,
+    uow: Mock,
+) -> None:
     """
-    update_task should allow description and due_date to be set to None.
+    update_task should allow description and due_date to be set to None
+    and commit when a real change happens.
     """
     # Arrange
     existing_task = build_task(title="Original title", description="original")
@@ -313,7 +337,7 @@ def test_update_task_saves_pending_state_with_nullable_fields(task_service: Task
         description=None,
         status=TaskStatus.PENDING,
         due_date=None,
-        is_blocked=False
+        is_blocked=False,
     )
 
     # Act
@@ -330,18 +354,24 @@ def test_update_task_saves_pending_state_with_nullable_fields(task_service: Task
 
     repository.get_task.assert_called_once_with(1)
     repository.save_task.assert_called_once_with(existing_task)
+    uow.commit.assert_called_once()
+    uow.rollback.assert_not_called()
 
-def test_update_task_does_not_save_when_no_real_changes(task_service: TaskService, repository: Mock):
+
+def test_update_task_does_not_save_or_commit_when_no_real_changes(
+    task_service: TaskService,
+    repository: Mock,
+    uow: Mock,
+) -> None:
     """
-    update_task should not save the task when the payload does not change any field.
+    update_task should not save or commit when the payload does not change any field.
     """
     # Arrange
     existing_task = build_new_task(
-        
         title="Original title",
         description="original",
         status=TaskStatus.IN_PROGRESS,
-        due_date=valid_due_date
+        due_date=valid_due_date,
     )
     repository.get_task.return_value = existing_task
 
@@ -350,7 +380,7 @@ def test_update_task_does_not_save_when_no_real_changes(task_service: TaskServic
         description="original",
         status=TaskStatus.IN_PROGRESS,
         due_date=valid_due_date,
-        is_blocked=False
+        is_blocked=False,
     )
 
     # Act
@@ -362,10 +392,18 @@ def test_update_task_does_not_save_when_no_real_changes(task_service: TaskServic
 
     repository.get_task.assert_called_once_with(1)
     repository.save_task.assert_not_called()
+    uow.commit.assert_not_called()
+    uow.rollback.assert_not_called()
 
-def test_update_task_updates_is_blocked_when_provided(task_service: TaskService, repository: Mock):
+
+def test_update_task_updates_is_blocked_when_provided_and_commits(
+    task_service: TaskService,
+    repository: Mock,
+    uow: Mock,
+) -> None:
     """
-    update_task should replace is_blocked when provided in the PUT payload.
+    update_task should replace is_blocked when provided in the PUT payload
+    and commit when a real change happens.
     """
     # Arrange
     existing_task = build_new_task(status=TaskStatus.PENDING, due_date=None)
@@ -377,7 +415,7 @@ def test_update_task_updates_is_blocked_when_provided(task_service: TaskService,
         description=existing_task.description,
         status=TaskStatus.PENDING,
         due_date=None,
-        is_blocked=True
+        is_blocked=True,
     )
 
     # Act
@@ -386,11 +424,24 @@ def test_update_task_updates_is_blocked_when_provided(task_service: TaskService,
     # Assert
     assert result.is_blocked is True
     assert result.updated_at is not None
+
     repository.get_task.assert_called_once_with(1)
     repository.save_task.assert_called_once_with(existing_task)
+    uow.commit.assert_called_once()
+    uow.rollback.assert_not_called()
 
-def test_update_task_propagates_domain_error_and_does_not_save_when_final_state_is_invalid(task_service: TaskService, repository: Mock) -> None:
-    existing_task = build_new_task( status=TaskStatus.PENDING, due_date=None)
+
+def test_update_task_propagates_domain_error_rolls_back_and_does_not_save_when_final_state_is_invalid(
+    task_service: TaskService,
+    repository: Mock,
+    uow: Mock,
+) -> None:
+    """
+    update_task should propagate domain validation errors, avoid saving,
+    and roll back the transaction.
+    """
+    # Arrange
+    existing_task = build_new_task(status=TaskStatus.PENDING, due_date=None)
     repository.get_task.return_value = existing_task
 
     task_update = TaskInput(
@@ -398,22 +449,33 @@ def test_update_task_propagates_domain_error_and_does_not_save_when_final_state_
         description=existing_task.description,
         status=TaskStatus.IN_PROGRESS,
         due_date=None,
-        is_blocked=False
+        is_blocked=False,
     )
 
+    # Act / Assert
     with pytest.raises(InvalidTaskDueDateError, match="Due date is required for IN PROGRESS tasks"):
         task_service.update_task(1, task_update)
 
     repository.get_task.assert_called_once_with(1)
     repository.save_task.assert_not_called()
+    uow.commit.assert_not_called()
+    uow.rollback.assert_called_once()
 
 # ----------------------------------------
 # patch_task
 # ----------------------------------------
 
-def test_patch_task_updates_only_provided_fields(task_service: TaskService, repository: Mock) -> None:
+def test_patch_task_updates_only_provided_fields_saves_and_commits(
+    task_service: TaskService,
+    repository: Mock,
+    uow: Mock,
+) -> None:
+    """
+    patch_task should update only the provided fields, save the task,
+    and commit when a real change happens.
+    """
+    # Arrange
     existing_task = build_new_task(
-        
         title="Original title",
         description="original",
         status=TaskStatus.PENDING,
@@ -428,8 +490,10 @@ def test_patch_task_updates_only_provided_fields(task_service: TaskService, repo
         description_provided=True,
     )
 
+    # Act
     result = task_service.patch_task(1, task_patch)
 
+    # Assert
     assert result.title == "Original title"
     assert result.description == "updated description"
     assert result.status == TaskStatus.PENDING
@@ -439,10 +503,21 @@ def test_patch_task_updates_only_provided_fields(task_service: TaskService, repo
 
     repository.get_task.assert_called_once_with(1)
     repository.save_task.assert_called_once_with(existing_task)
+    uow.commit.assert_called_once()
+    uow.rollback.assert_not_called()
 
-def test_patch_task_allows_description_to_be_cleared(task_service: TaskService, repository: Mock) -> None:
+
+def test_patch_task_allows_description_to_be_cleared_saves_and_commits(
+    task_service: TaskService,
+    repository: Mock,
+    uow: Mock,
+) -> None:
+    """
+    patch_task should allow clearing description, save the task,
+    and commit when a real change happens.
+    """
+    # Arrange
     existing_task = build_new_task(
-        
         description="original",
         due_date=valid_due_date,
     )
@@ -454,17 +529,29 @@ def test_patch_task_allows_description_to_be_cleared(task_service: TaskService, 
         description_provided=True,
     )
 
+    # Act
     result = task_service.patch_task(1, task_patch)
 
+    # Assert
     assert result.description is None
     assert result.updated_at is not None
 
     repository.get_task.assert_called_once_with(1)
     repository.save_task.assert_called_once_with(existing_task)
+    uow.commit.assert_called_once()
+    uow.rollback.assert_not_called()
 
-def test_patch_task_does_not_save_when_patch_does_not_change_state(task_service: TaskService, repository: Mock) -> None:
+
+def test_patch_task_does_not_save_or_commit_when_patch_does_not_change_state(
+    task_service: TaskService,
+    repository: Mock,
+    uow: Mock,
+) -> None:
+    """
+    patch_task should not save or commit when the final state is unchanged.
+    """
+    # Arrange
     existing_task = build_new_task(
-        
         title="Original title",
         description="original",
         status=TaskStatus.PENDING,
@@ -478,15 +565,28 @@ def test_patch_task_does_not_save_when_patch_does_not_change_state(task_service:
         title_provided=True,
     )
 
+    # Act
     result = task_service.patch_task(1, task_patch)
 
+    # Assert
     assert result is existing_task
     assert result.updated_at is None
 
     repository.get_task.assert_called_once_with(1)
     repository.save_task.assert_not_called()
+    uow.commit.assert_not_called()
+    uow.rollback.assert_not_called()
 
-def test_patch_task_raises_when_repository_returns_none(task_service: TaskService, repository: Mock) -> None:
+
+def test_patch_task_raises_and_rolls_back_when_repository_returns_none(
+    task_service: TaskService,
+    repository: Mock,
+    uow: Mock,
+) -> None:
+    """
+    patch_task should raise TaskNotFoundError and roll back when the task does not exist.
+    """
+    # Arrange
     repository.get_task.return_value = None
 
     task_patch = PatchTaskInput(
@@ -494,18 +594,27 @@ def test_patch_task_raises_when_repository_returns_none(task_service: TaskServic
         description_provided=True,
     )
 
+    # Act / Assert
     with pytest.raises(TaskNotFoundError, match="Task not found"):
         task_service.patch_task(999, task_patch)
 
     repository.get_task.assert_called_once_with(999)
     repository.save_task.assert_not_called()
+    uow.commit.assert_not_called()
+    uow.rollback.assert_called_once()
 
-def test_patch_task_propagates_domain_error_and_does_not_save_when_final_state_is_invalid(
+
+def test_patch_task_propagates_domain_error_rolls_back_and_does_not_save_when_final_state_is_invalid(
     task_service: TaskService,
     repository: Mock,
+    uow: Mock,
 ) -> None:
+    """
+    patch_task should propagate domain validation errors, avoid saving,
+    and roll back the transaction.
+    """
+    # Arrange
     existing_task = build_new_task(
-        
         status=TaskStatus.PENDING,
         due_date=None,
         is_blocked=False,
@@ -517,8 +626,57 @@ def test_patch_task_propagates_domain_error_and_does_not_save_when_final_state_i
         status_provided=True,
     )
 
+    # Act / Assert
     with pytest.raises(InvalidTaskDueDateError, match="Due date is required for IN PROGRESS tasks"):
         task_service.patch_task(1, task_patch)
 
     repository.get_task.assert_called_once_with(1)
     repository.save_task.assert_not_called()
+    uow.commit.assert_not_called()
+    uow.rollback.assert_called_once()
+
+# ----------------------------------------
+# delete_task
+# ----------------------------------------
+
+def test_delete_task_calls_repository_delete_and_commits_when_task_exists(
+    task_service: TaskService,
+    repository: Mock,
+    uow: Mock,
+) -> None:
+    """
+    delete_task should call repository.delete_task and commit when the task exists.
+    """
+    # Arrange
+    existing_task = build_new_task(title="Task to delete")
+    repository.get_task.return_value = existing_task
+
+    # Act
+    task_service.delete_task(1)
+
+    # Assert
+    repository.get_task.assert_called_once_with(1)
+    repository.delete_task.assert_called_once_with(1)
+    uow.commit.assert_called_once()
+    uow.rollback.assert_not_called()
+
+
+def test_delete_task_raises_and_rolls_back_when_repository_returns_none(
+    task_service: TaskService,
+    repository: Mock,
+    uow: Mock,
+) -> None:
+    """
+    delete_task should raise TaskNotFoundError and roll back when the task does not exist.
+    """
+    # Arrange
+    repository.get_task.return_value = None
+
+    # Act / Assert
+    with pytest.raises(TaskNotFoundError, match="Task not found"):
+        task_service.delete_task(999)
+
+    repository.get_task.assert_called_once_with(999)
+    repository.delete_task.assert_not_called()
+    uow.commit.assert_not_called()
+    uow.rollback.assert_called_once()
