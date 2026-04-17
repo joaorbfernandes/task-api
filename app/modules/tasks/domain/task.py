@@ -143,8 +143,6 @@ class Task:
         target_status: TaskStatus,
         target_is_blocked: bool,
     ) -> None:
-        if not self.is_blocked:
-            return
 
         if self.status == TaskStatus.PENDING:
             if target_status == TaskStatus.IN_PROGRESS and target_is_blocked:

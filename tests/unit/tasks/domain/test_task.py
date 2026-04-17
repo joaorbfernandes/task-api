@@ -234,7 +234,7 @@ def test_update_rejects_completed_with_blocked_true() -> None:
     # Act / Assert
     with pytest.raises(
         InvalidTaskStatusTransitionError,
-        match="Task can't be blocked in the COMPLETED state",
+        match="Can't change task status from IN PROGRESS to COMPLETED because the task is BLOCKED",
     ):
         task.update(
             title=task.title,
@@ -319,7 +319,7 @@ def test_update_does_not_mutate_task_when_validation_fails() -> None:
     # Act / Assert
     with pytest.raises(
         InvalidTaskStatusTransitionError,
-        match="Task can't be blocked in the COMPLETED state",
+        match="Can't change task status from IN PROGRESS to COMPLETED because the task is BLOCKED",
     ):
         task.update(
             title="Changed",
@@ -349,3 +349,105 @@ def test_mark_updated_sets_updated_at() -> None:
 
     # Assert
     assert task.updated_at == timestamp
+
+def test_update_rejects_transition_from_pending_to_in_progress_when_target_becomes_blocked() -> None:
+    """
+    update should reject the transition from PENDING to IN_PROGRESS
+    when the target state becomes blocked.
+    """
+    # Arrange
+    task = build_new_task(
+        status=TaskStatus.PENDING,
+        due_date=None,
+        is_blocked=False,
+    )
+
+    # Act / Assert
+    with pytest.raises(
+        InvalidTaskStatusTransitionError,
+        match="PENDING to IN PROGRESS",
+    ):
+        task.update(
+            title=task.title,
+            description=task.description,
+            status=TaskStatus.IN_PROGRESS,
+            due_date=future_date(),
+            is_blocked=True,
+        )
+
+def test_update_allows_transition_from_pending_to_in_progress_when_target_is_not_blocked() -> None:
+    """
+    update should allow the transition from PENDING to IN_PROGRESS
+    when the target state is not blocked.
+    """
+    # Arrange
+    task = build_new_task(
+        status=TaskStatus.PENDING,
+        due_date=None,
+        is_blocked=False,
+    )
+
+    # Act
+    changed = task.update(
+        title=task.title,
+        description=task.description,
+        status=TaskStatus.IN_PROGRESS,
+        due_date=future_date(),
+        is_blocked=False,
+    )
+
+    # Assert
+    assert changed is True
+    assert task.status == TaskStatus.IN_PROGRESS
+    assert task.is_blocked is False
+
+def test_update_rejects_transition_from_pending_blocked_to_in_progress_blocked() -> None:
+    """
+    update should reject the transition from PENDING to IN_PROGRESS
+    when the task remains blocked in the target state.
+    """
+    # Arrange
+    task = build_new_task(
+        status=TaskStatus.PENDING,
+        due_date=None,
+        is_blocked=True,
+    )
+
+    # Act / Assert
+    with pytest.raises(
+        InvalidTaskStatusTransitionError,
+        match="PENDING to IN PROGRESS",
+    ):
+        task.update(
+            title=task.title,
+            description=task.description,
+            status=TaskStatus.IN_PROGRESS,
+            due_date=future_date(),
+            is_blocked=True,
+        )
+
+def test_update_allows_transition_from_pending_blocked_to_in_progress_when_target_is_unblocked() -> None:
+    """
+    update should allow the transition from PENDING to IN_PROGRESS
+    when the target state is unblocked.
+    """
+    # Arrange
+    task = build_new_task(
+        status=TaskStatus.PENDING,
+        due_date=None,
+        is_blocked=True,
+    )
+
+    # Act
+    changed = task.update(
+        title=task.title,
+        description=task.description,
+        status=TaskStatus.IN_PROGRESS,
+        due_date=future_date(),
+        is_blocked=False,
+    )
+
+    # Assert
+    assert changed is True
+    assert task.status == TaskStatus.IN_PROGRESS
+    assert task.is_blocked is False

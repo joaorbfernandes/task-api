@@ -266,7 +266,7 @@ def test_update_task_replaces_task_data_saves_it_and_commits(
         description="updated",
         status=TaskStatus.IN_PROGRESS,
         due_date=valid_due_date,
-        is_blocked=True,
+        is_blocked=False,
     )
 
     repository.save_task.side_effect = save_task_side_effect
@@ -280,7 +280,7 @@ def test_update_task_replaces_task_data_saves_it_and_commits(
     assert result.description == "updated"
     assert result.status == TaskStatus.IN_PROGRESS
     assert result.due_date == valid_due_date
-    assert result.is_blocked is True
+    assert result.is_blocked is False
     assert result.created_at == existing_task.created_at
     assert result.updated_at is not None
 
