@@ -91,7 +91,7 @@ app/
 |   GET    | `/tasks`      | List tasks            |
 |   POST   | `/tasks`      | Create task           |
 |   GET    | `/tasks/{id}` | Get task by id        |
-|   PUT    | `/tasks/{id}` | Update task (replace) |
+|   PUT    | `/tasks/{id}` | Update task           |
 |   PATCH  | `/tasks/{id}` | Update task (partial) |
 |   DELETE | `/tasks/{id}` | Delete task           |
 
@@ -109,9 +109,10 @@ app/
 - title is trimmed and validated
 - `IN_PROGRESS` requires `due_date`
 - `COMPLETED` requires `due_date`
-- `COMPLETED` cannot remain blocked
-- blocked tasks follow extra transition restrictions during update
-- tasks are only saved when the state really changes
+- `COMPLETED` can't be blocked
+- update rejects PENDING -> IN_PROGRESS when the target state is blocked
+- update rejects IN_PROGRESS -> COMPLETED when the target state is blocked
+- tasks are only persisted when the state really chang
 
 
 ## Testing Strategy
