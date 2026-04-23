@@ -42,19 +42,19 @@ class TaskService:
         return self._repository.list_tasks()
 
 
-    def create_task(self, task: TaskInput) -> Task:
+    def create_task(self, task_input: TaskInput) -> Task:
         """Create a new task through the repository contract."""
         try:
-            task = Task.create(
-                title=task.title,
-                description=task.description,
-                status=task.status,
-                due_date=task.due_date,
-                is_blocked=task.is_blocked,
+            new_task = Task.create(
+                title=task_input.title,
+                description=task_input.description,
+                status=task_input.status,
+                due_date=task_input.due_date,
+                is_blocked=task_input.is_blocked,
                 created_at=self._current_timestamp()
             )
 
-            created_task = self._repository.create_task(task)
+            created_task = self._repository.create_task(new_task)
             self._uow.commit()
             return created_task
 
@@ -64,12 +64,12 @@ class TaskService:
 
     def get_task(self, task_id: int) -> Task:
         """Return a task by id or raise TaskNotFoundError if it does not exist."""
-        task = self._repository.get_task(task_id)
+        current_task = self._repository.get_task(task_id)
 
-        if task is None:
+        if current_task is None:
             raise TaskNotFoundError("Task not found")
 
-        return task
+        return current_task
 
     def update_task(self, task_id: int, task_input: TaskInput) -> Task:
         """Fully replace task data using the provided application input."""
