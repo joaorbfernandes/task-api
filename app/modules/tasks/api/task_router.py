@@ -24,7 +24,7 @@ def get_task(task_id: int, task_service: TaskService = Depends(get_task_service)
 def create_task(payload: TaskInput, task_service: TaskService = Depends(get_task_service)):
     """Create a new task."""
     task_input = map_task_input(payload)
-    return task_service.create_task(task=task_input)
+    return task_service.create_task(task_input=task_input)
 
 
 @router.put("/tasks/{task_id}", response_model=TaskResponse, status_code=200)
