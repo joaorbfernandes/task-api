@@ -62,6 +62,14 @@ app/
 ├── main.py
 ├── api/
 │   └── health_router.py
+├── core/
+│   └── config/
+│       ├── settings.py
+├── infrastructure/
+│   └── db/
+│       ├── base.py
+│       ├── session_factory.py
+│       └── sqlalchemy_unit_of_work.py
 └── modules/
     └── tasks/
         ├── api/
