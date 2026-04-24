@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends
 
-from app.modules.tasks.api.task_schemas import TaskInput, TaskPatch, TaskResponse
+from app.modules.tasks.api.task_schemas import TaskPatch, TaskResponse, TaskInput as TaskInputSchema
+from app.modules.tasks.application.task_dtos import TaskInput as TaskInputDTO
 from app.modules.tasks.application.task_service import TaskService
-from app.modules.tasks.application.task_mappers import map_task_input, map_task_patch_to_input
+from app.modules.tasks.application.task_mappers import map_task_patch_to_input
 from app.modules.tasks.api.dependencies import get_task_service
 
 router = APIRouter()
@@ -21,16 +22,28 @@ def get_task(task_id: int, task_service: TaskService = Depends(get_task_service)
 
 
 @router.post("/tasks", response_model=TaskResponse, status_code=201)
-def create_task(payload: TaskInput, task_service: TaskService = Depends(get_task_service)):
+def create_task(payload: TaskInputSchema, task_service: TaskService = Depends(get_task_service)):
     """Create a new task."""
-    task_input = map_task_input(payload)
+    task_input = TaskInputDTO(
+        title=payload.title,
+        description=payload.description,
+        status=payload.status,
+        due_date=payload.due_date,
+        is_blocked=payload.is_blocked
+    )
     return task_service.create_task(task_input=task_input)
 
 
 @router.put("/tasks/{task_id}", response_model=TaskResponse, status_code=200)
-def update_task(task_id: int, payload: TaskInput, task_service: TaskService = Depends(get_task_service)):
+def update_task(task_id: int, payload: TaskInputSchema, task_service: TaskService = Depends(get_task_service)):
     """Fully replace task data."""
-    task_input = map_task_input(payload)
+    task_input = TaskInputDTO(
+        title=payload.title,
+        description=payload.description,
+        status=payload.status,
+        due_date=payload.due_date,
+        is_blocked=payload.is_blocked
+    )
     return task_service.update_task(task_id=task_id, task_input=task_input)
 
 

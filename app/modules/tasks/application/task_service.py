@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from app.modules.tasks.application.task_dtos import TaskInput, PatchTaskInput
+from app.modules.tasks.application.task_dtos import TaskInput as TaskInputDTO, PatchTaskInput as PatchTaskInputDTO
 from app.modules.tasks.application.task_repository import TaskRepository
 from app.application.unit_of_work import UnitOfWork
 from app.modules.tasks.domain.task import Task
@@ -19,7 +19,7 @@ class TaskService:
         """Return the current UTC timestamp without microseconds."""
         return datetime.now(UTC).replace(microsecond=0)
 
-    def _apply_update(self, task: Task, task_input: TaskInput) -> tuple[Task, bool]:
+    def _apply_update(self, task: Task, task_input: TaskInputDTO) -> tuple[Task, bool]:
         """Apply a full update to an existing task and persist it if changed."""
         changed = task.update(
             title=task_input.title,
@@ -42,7 +42,7 @@ class TaskService:
         return self._repository.list_tasks()
 
 
-    def create_task(self, task_input: TaskInput) -> Task:
+    def create_task(self, task_input: TaskInputDTO) -> Task:
         """Create a new task through the repository contract."""
         try:
             new_task = Task.create(
@@ -71,7 +71,7 @@ class TaskService:
 
         return current_task
 
-    def update_task(self, task_id: int, task_input: TaskInput) -> Task:
+    def update_task(self, task_id: int, task_input: TaskInputDTO) -> Task:
         """Fully replace task data using the provided application input."""
         try:
             current_task = self.get_task(task_id)
@@ -86,12 +86,12 @@ class TaskService:
             self._uow.rollback()
             raise
 
-    def patch_task(self, task_id: int, task_input: PatchTaskInput) -> Task:
+    def patch_task(self, task_id: int, task_input: PatchTaskInputDTO) -> Task:
         """Partially update task data using the provided application input."""
         try:
             current_task = self.get_task(task_id)
 
-            full_input = TaskInput(
+            full_input = TaskInputDTO(
                 title=task_input.title if task_input.title_provided else current_task.title,
                 description=task_input.description if task_input.description_provided else current_task.description,
                 status=task_input.status if task_input.status_provided else current_task.status,
