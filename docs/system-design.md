@@ -210,6 +210,16 @@ Note:
 - PostgreSQL generates the id during persistence
 - the repository returns the persisted task with the generated id
 
+## Database Bootstrap vs Schema Migrations
+
+The project separates database bootstrap from schema evolution:
+
+- database bootstrap is responsible for creating the database, roles, and grants
+
+- Alembic is responsible for creating and evolving schema objects inside the existing database
+
+This keeps security and environment provisioning separate from application schema versioning.
+
 ## Direction
 
 The project is evolving in small steps:

@@ -135,3 +135,58 @@ Tests follow the AAA pattern:
 - Arrange
 - Act
 - Assert
+
+## Database Setup and Migrations
+
+### Responsibilities
+
+Database bootstrap and schema migrations are intentionally separated:
+
+- **Bootstrap** creates the PostgreSQL database, roles, and grants
+- **Alembic** manages schema creation and schema evolution inside the existing database
+
+### Roles
+
+The project uses two PostgreSQL users per environment:
+
+- **migrator user**: used by Alembic to create and evolve schema objects
+- **application user**: used by the API at runtime to read and write application data
+
+The application user should not have schema-change privileges.
+
+### One-time Bootstrap
+
+Before running Alembic, the environment must already contain:
+
+- the target database
+- the migrator role/user
+- the application role/user
+- the required grants for both roles
+
+### Migration Workflow
+
+Generate a new migration after changing SQLAlchemy models:
+
+```bash
+alembic revision --autogenerate -m "describe change here"
+```
+
+Review the generated migration manually before applying it.
+
+Apply all pending migrations:
+
+```bash
+alembic upgrade head
+```
+
+Check the current database revision:
+
+```bash
+alembic current
+```
+
+Show migration history:
+
+```bash
+alembic history
+```

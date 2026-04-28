@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Integer, String
+from sqlalchemy import Boolean, Date, DateTime, Integer, String, false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.db.base import Base
@@ -16,4 +16,4 @@ class TaskModel(Base):
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    is_blocked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_blocked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
