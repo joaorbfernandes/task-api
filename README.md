@@ -14,15 +14,20 @@ It focuses on:
 ## Tech Stack
 
 - [**FastAPI**](https://fastapi.tiangolo.com) — API framework
-- [Pydantic](https://docs.pydantic.dev) — data validation and schemas
-- [Uvicorn](https://uvicorn.dev/) — ASGI server
-- [Pytest](https://pytest.org) — testing framework
-- [uv](https://docs.astral.sh/uv/) — package and environment manager
+- [**Pydantic**](https://docs.pydantic.dev) — data validation and schemas
+- [**SQLAlchemy**](https://docs.sqlalchemy.org) — ORM and persistence mapping
+- [**PostgreSQL**](https://www.postgresql.org) — relational database
+- [**Alembic**](https://alembic.sqlalchemy.org) — schema migrations
+- [**Uvicorn**](https://uvicorn.dev/) — ASGI server
+- [**Pytest**](https://pytest.org) — testing framework
+- [**uv**](https://docs.astral.sh/uv/) — package and environment manager
 
 ## Requirements
 
 - Python 3.13+
 - uv
+- PostgreSQL running locally
+- a PostgreSQL admin user available for bootstrap
 
 ## Setup
 
@@ -37,6 +42,30 @@ Install dependencies (including test dependencies):
 
 ```bash
 uv sync --extra dev
+```
+
+Create a local environment file:
+
+```bash
+cp .env.example .env
+```
+
+Before running the bootstrap step, make sure PostgreSQL is already running locally and accepting connections on the configured `DB_HOST` and `DB_PORT`.
+
+The bootstrap script does not start PostgreSQL for you. It only provisions roles, database, and grants.
+
+Fill in the database credentials in `.env`
+
+Bootstrap the PostgreSQL environment:
+
+```bash
+DB_BOOTSTRAP_ADMIN_USER=postgres ./scripts/db/bootstrap_dev.sh
+```
+
+After bootstrap, apply all pending migrations:
+
+```bash
+alembic upgrade head
 ```
 
 Start the development server:
@@ -65,6 +94,8 @@ app/
 ├── core/
 │   └── config/
 │       ├── settings.py
+├── application/
+│   └── unit_of_work.py
 ├── infrastructure/
 │   └── db/
 │       ├── base.py
@@ -87,7 +118,9 @@ app/
         │   ├── task_errors.py
         │   └── task_status.py
         └── infrastructure/
-            └── in_memory_task_repository.py
+            ├── in_memory_task_repository.py
+            ├── sqlalchemy_task_repository.py
+            └── task_model.py
 ```
 
  ## API Endpoints
@@ -110,7 +143,10 @@ app/
 - blocked-state rules
 - due date validation
 - explicit update flow with change detection
-- repository abstraction with in-memory persistence
+- repository abstraction
+- PostgreSQL persistence through SQLAlchemy
+- in-memory repository retained for isolated testing
+- schema evolution through Alembic migrations
 
 ## Example Domain Rules
 
@@ -118,9 +154,9 @@ app/
 - `IN_PROGRESS` requires `due_date`
 - `COMPLETED` requires `due_date`
 - `COMPLETED` can't be blocked
-- update rejects PENDING -> IN_PROGRESS when the target state is blocked
-- update rejects IN_PROGRESS -> COMPLETED when the target state is blocked
-- tasks are only persisted when the state really chang
+- update rejects `PENDING -> IN_PROGRESS` when the target state is blocked
+- update rejects `IN_PROGRESS -> COMPLETED` when the target state is blocked
+- tasks are only persisted when the state really changes
 
 
 ## Testing Strategy
@@ -162,6 +198,18 @@ Before running Alembic, the environment must already contain:
 - the migrator role/user
 - the application role/user
 - the required grants for both roles
+
+The project provides bootstrap scripts under:
+
+```text
+scripts/db/
+```
+
+These scripts create:
+
+- PostgreSQL roles
+- the target database
+- grants and default privileges
 
 ### Migration Workflow
 
