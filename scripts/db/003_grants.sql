@@ -1,0 +1,50 @@
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+
+SELECT format(
+    'ALTER SCHEMA public OWNER TO %I',
+    :'DB_MIGRATION_USER'
+) \gexec
+
+SELECT format(
+    'GRANT USAGE, CREATE ON SCHEMA public TO %I',
+    :'DB_MIGRATION_USER'
+) \gexec
+
+SELECT format(
+    'GRANT USAGE ON SCHEMA public TO %I',
+    :'DB_APP_USER'
+) \gexec
+
+SELECT format(
+    'GRANT CONNECT, TEMPORARY ON DATABASE %I TO %I',
+    :'DB_NAME',
+    :'DB_MIGRATION_USER'
+) \gexec
+
+SELECT format(
+    'GRANT CONNECT ON DATABASE %I TO %I',
+    :'DB_NAME',
+    :'DB_APP_USER'
+) \gexec
+
+SELECT format(
+    'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO %I',
+    :'DB_APP_USER'
+) \gexec
+
+SELECT format(
+    'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO %I',
+    :'DB_APP_USER'
+) \gexec
+
+SELECT format(
+    'ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO %I',
+    :'DB_MIGRATION_USER',
+    :'DB_APP_USER'
+) \gexec
+
+SELECT format(
+    'ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO %I',
+    :'DB_MIGRATION_USER',
+    :'DB_APP_USER'
+) \gexec

@@ -5,6 +5,7 @@ description = "Simple task management API built with FastAPI."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "alembic>=1.18.4",
     "fastapi>=0.135.1",
     "psycopg[binary]>=3.3.3",
     "pydantic-settings>=2.14.0",

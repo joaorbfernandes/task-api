@@ -39,8 +39,8 @@ app/
 - Schema validates request and response data
 - Service coordinates the use case
 - Domain enforces business rules and state consistency
-- Repository abstracts persistence
-- Persistence stores application data
+- Repository abstracts persistence and maps domain entities to the persistence layer
+- Persistence stores application data in PostgreSQL
 
 ## Endpoints
 
@@ -186,14 +186,14 @@ Note:
 
 #### Current Task Rules
 
-- title is trimmed and cannot be empty 
+- title is trimmed and cannot be empty
 - title must be at least 3 characters long
 - title must be at most 120 characters long
 - IN_PROGRESS requires due_date
 - COMPLETED requires due_date
 - due_date cannot be in the past
 - COMPLETED cannot remain blocked
-- blocked tasks have extra transition restrictions
+- updates enforce extra rules for specific status and blocked-state combinations
 - updates are fully validated before changes are applied
 - tasks are saved only when the state really changes
 
@@ -209,6 +209,18 @@ Note:
 - new tasks are created in the domain without a persistent id
 - PostgreSQL generates the id during persistence
 - the repository returns the persisted task with the generated id
+
+## Database Bootstrap vs Schema Migrations
+
+The project separates database bootstrap from schema evolution:
+
+- database bootstrap is responsible for creating the database, roles, and grants
+- Alembic is responsible for creating and evolving schema objects inside the existing database
+
+Bootstrap prepares the PostgreSQL environment, but it does **not** create application tables.
+Alembic must apply the current schema before the application starts using the database.
+
+This keeps security and environment provisioning separate from application schema versioning.
 
 ## Direction
 
